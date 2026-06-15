@@ -1,0 +1,110 @@
+<div class="grid gap-5 lg:gap-7.5">
+    <div class="kt-card kt-card-grid min-w-full">
+        <div class="kt-card-header flex-wrap gap-2">
+            <h3 class="kt-card-title text-sm">
+                {{ 'MODULES.EMAIL_NOTIFICATIONS.TABLE_TITLE' | translate }}
+            </h3>
+        </div>
+
+        <div class="kt-card-content">
+            <div class="kt-scrollable-x-auto">
+                <table class="kt-table table-auto kt-table-border">
+                    <thead>
+                    <tr>
+                        <th class="text-center" rowspan="2">
+                            {{ 'MODULES.EMAIL_NOTIFICATIONS.COLUMN.MESSAGE' | translate }}
+                        </th>
+                        <th class="text-center" rowspan="2">
+                            {{ 'MODULES.EMAIL_NOTIFICATIONS.COLUMN.REPORTER' | translate }}
+                        </th>
+                        <th class="text-center" rowspan="2">
+                            {{ 'MODULES.EMAIL_NOTIFICATIONS.COLUMN.HANDLER' | translate }}
+                        </th>
+                        <th class="text-center" rowspan="2">
+                            {{ 'MODULES.EMAIL_NOTIFICATIONS.COLUMN.MONITORS' | translate }}
+                        </th>
+                        <th class="text-center" rowspan="2">
+                            {{ 'MODULES.EMAIL_NOTIFICATIONS.COLUMN.BUG_NOTES' | translate }}
+                        </th>
+                        <th class="text-center" rowspan="2">
+                            {{ 'MODULES.EMAIL_NOTIFICATIONS.COLUMN.CATEGORY_OWNER' | translate }}
+                        </th>
+                        <th class="text-center" colspan="6">
+                            {{ 'MODULES.EMAIL_NOTIFICATIONS.COLUMN.ANY_USER_ACCESS' | translate }}
+                        </th>
+                    </tr>
+                    <tr>
+                        <th class="text-center whitespace-nowrap">
+                            {{ 'MODULES.EMAIL_NOTIFICATIONS.COLUMN.ACCESS_LEVEL.VIEWER' | translate }}
+                        </th>
+                        <th class="text-center whitespace-nowrap">
+                            {{ 'MODULES.EMAIL_NOTIFICATIONS.COLUMN.ACCESS_LEVEL.REPORTER' | translate }}
+                        </th>
+                        <th class="text-center whitespace-nowrap">
+                            {{ 'MODULES.EMAIL_NOTIFICATIONS.COLUMN.ACCESS_LEVEL.UPDATER' | translate }}
+                        </th>
+                        <th class="text-center whitespace-nowrap">
+                            {{ 'MODULES.EMAIL_NOTIFICATIONS.COLUMN.ACCESS_LEVEL.DEVELOPER' | translate }}
+                        </th>
+                        <th class="text-center whitespace-nowrap">
+                            {{ 'MODULES.EMAIL_NOTIFICATIONS.COLUMN.ACCESS_LEVEL.MANAGER' | translate }}
+                        </th>
+                        <th class="text-center whitespace-nowrap">
+                            {{ 'MODULES.EMAIL_NOTIFICATIONS.COLUMN.ACCESS_LEVEL.ADMINISTRATOR' | translate }}
+                        </th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+                    <tr *ngFor="let row of data; let i = index">
+                        <td class="text-center whitespace-nowrap">{{ row.message | translate}}</td>
+
+                        <td class="text-center">
+                            <input type="checkbox" [(ngModel)]="row.userWhoReportedTheIssue" (change)="onCheckboxChange(row, 'userWhoReportedTheIssue', $event)">
+                        </td>
+                        <td class="text-center">
+                            <input type="checkbox" [(ngModel)]="row.userWhoIsHandlingTheEssue" (change)="onCheckboxChange(row, 'userWhoIsHandlingTheEssue', $event)">
+                        </td>
+                        <td class="text-center">
+                            <input type="checkbox" [(ngModel)]="row.usersMonitoringThisIssue" (change)="onCheckboxChange(row, 'usersMonitoringThisIssue', $event)">
+                        </td>
+                        <td class="text-center">
+                            <input type="checkbox" [(ngModel)]="row.usersWhoAddedIssueNotes" (change)="onCheckboxChange(row, 'usersWhoAddedIssueNotes', $event)">
+                        </td>
+                        <td class="text-center">
+                            <input type="checkbox" [(ngModel)]="row.categoryOwner" (change)="onCheckboxChange(row, 'categoryOwner', $event)">
+                        </td>
+                        <td class="text-center">
+                            <input type="checkbox" [(ngModel)]="row.viewer" (change)="onCheckboxChange(row, 'viewer', $event)">
+                        </td>
+                        <td class="text-center">
+                            <input type="checkbox" [(ngModel)]="row.reporter" (change)="onCheckboxChange(row, 'reporter', $event)">
+                        </td>
+                        <td class="text-center">
+                            <input type="checkbox" [(ngModel)]="row.updater" (change)="onCheckboxChange(row, 'updater', $event)">
+                        </td>
+                        <td class="text-center">
+                            <input type="checkbox" [(ngModel)]="row.developer" (change)="onCheckboxChange(row, 'developer', $event)">
+                        </td>
+                        <td class="text-center">
+                            <input type="checkbox" [(ngModel)]="row.manager" (change)="onCheckboxChange(row, 'manager', $event)">
+                        </td>
+                        <td class="text-center">
+                            <input type="checkbox" [(ngModel)]="row.administrator" (change)="onCheckboxChange(row, 'administrator', $event)">
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex justify-end">
+        <button (click)="onSubmit()" type="submit" class="kt-btn kt-btn-primary">
+            <i class="ki-filled ki-check-circle"></i>
+            <span>
+        {{ 'MODULES.BUTTONS.UPDATE_CONFIGURATION' | translate }}
+      </span>
+        </button>
+    </div>
+</div>

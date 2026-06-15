@@ -1,0 +1,85 @@
+<div class="kt-container-fluid">
+
+    <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-semibold text-mono">
+
+        </h2>
+
+        <button
+                class="kt-btn kt-btn-light bg-gray-100 text-gray-600 hover:bg-gray-200"
+                (click)="navigate()">
+            <i class="ki-filled ki-home text-lg"></i>
+            <span>{{ 'MODULES.BUTTONS.BACK' | translate }}</span>
+        </button>
+    </div>
+
+<div class="grid gap-5 lg:gap-7.5">
+    <div class="kt-card kt-card-grid min-w-full">
+        <div class="kt-card-header flex-wrap gap-2">
+            <h3 class="kt-card-title text-sm">
+                {{ 'MODULES.DATA_SOURCES.AMMC.TITLE' | translate }}
+            </h3>
+        </div>
+        <div class="kt-card-content">
+            <div>
+                <div class="kt-scrollable-x-auto">
+                    <table class="kt-table table-auto kt-table-border">
+                        <thead>
+                        <tr>
+                            <th class="min-w-[150px]">
+                                {{ 'MODULES.DATA_SOURCES.AMMC.PUBLICATION_DATE' | translate }}
+                            </th>
+                            <th class="min-w-[600px]">
+                                {{ 'MODULES.DATA_SOURCES.AMMC.TABLE_TITLE' | translate }}
+                            </th>
+                            <th class="min-w-[120px] text-center">
+                                {{ 'MODULES.DATA_SOURCES.AMMC.DOCUMENT' | translate }}
+                            </th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr *ngFor="let element of data?.content">
+
+                            <td class="text-foreground font-normal text-nowrap">{{ element.date | date:'dd-MM-yyyy' }}</td>
+
+                            <td class="text-foreground font-normal">{{ element.titre }}</td>
+
+                            <td class="text-center">
+                                <a
+                                        [href]="element.url"
+                                        target="_blank"
+                                        class="kt-btn kt-btn-sm kt-btn-icon kt-btn-light"
+                                        title="Télécharger le PDF"
+                                >
+                                    <i class="ki-filled ki-file-down text-lg"></i>
+                                </a>
+                            </td>
+
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div *ngIf="data?.totalElements > 0" class="kt-card-footer justify-between flex gap-5 text-secondary-foreground text-sm font-medium">
+                    <div class="">
+                        {{
+                            ((currentPage - 1) * data.size + 1)
+                            + ' - ' +
+                            (currentPage * data.size > data.totalElements ? data.totalElements : currentPage * data.size)
+                            + ' ' + ('MODULES.GLOBAL.OF' | translate) + ' '  +
+                            data.totalElements
+                        }}
+                    </div>
+                    <ngb-pagination
+                            [collectionSize]="data?.totalElements"
+                            [pageSize]="data.size"
+                            [maxSize]="5"
+                            [rotate]="true"
+                            [boundaryLinks]="true"
+                            [(page)]="currentPage">
+                    </ngb-pagination>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>

@@ -1,0 +1,97 @@
+<div class="kt-container-fluid">
+
+    <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-semibold text-mono">
+
+        </h2>
+
+        <button
+                class="kt-btn kt-btn-light bg-gray-100 text-gray-600 hover:bg-gray-200"
+                (click)="navigate()">
+            <i class="ki-filled ki-home text-lg"></i>
+            <span>{{ 'MODULES.BUTTONS.BACK' | translate }}</span>
+        </button>
+    </div>
+
+<div class="grid gap-5 lg:gap-7.5">
+    <div class="kt-card kt-card-grid min-w-full">
+        <div class="kt-card-header flex-wrap gap-2">
+            <h3 class="kt-card-title text-sm">
+                {{ 'MODULES.COURS_BILLETS.TITLE' | translate }}
+            </h3>
+            <div class="flex flex-wrap gap-2 lg:gap-5">
+                <div class="flex">
+                    <label class="kt-input">
+                        <i class="ki-filled ki-magnifier">
+                        </i>
+                        <input
+                                placeholder="{{ 'MODULES.COURS_BILLETS.FILTERS.SEARCH_PLACEHOLDER' | translate }}"
+                                type="text"
+                                [(ngModel)]="term"
+                                (input)="onFind()" />
+                    </label>
+                </div>
+                <div class="flex flex-wrap gap-2.5">
+                    <button class="kt-btn  kt-btn-primary" (click)="onExport()">
+                        <i class="ki-filled ki-file-down"></i>
+                        {{ 'MODULES.BUTTONS.EXPORT' | translate }}
+                    </button>
+                </div>
+            </div>
+
+        </div>
+        <div class="kt-card-content">
+            <div>
+                <div class="kt-scrollable-x-auto">
+                    <table class="kt-table table-auto kt-table-border">
+                        <thead>
+                        <tr>
+                            <th>{{ 'MODULES.COURS_BILLETS.TABLE.DEVISE' | translate }}</th>
+                            <th class="text-right">{{ 'MODULES.COURS_BILLETS.TABLE.ACHAT_CLIENTELE' | translate }}</th>
+                            <th class="text-right">{{ 'MODULES.COURS_BILLETS.TABLE.VENTE_CLIENTELE' | translate }}</th>
+                        </tr>
+                        </thead>
+
+                        <tbody>
+                        <tr *ngFor="let e of data?.content">
+
+                            <td class="font-medium text-nowrap">
+                                {{ e?.devises }}
+                            </td>
+
+                            <td class="text-right font-semibold">
+                                {{ e?.achatClientele | number:'1.4-4' }}
+                            </td>
+
+                            <td class="text-right font-semibold">
+                                {{ e?.venteClientele | number:'1.4-4' }}
+                            </td>
+
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div *ngIf="data?.totalElements > 0" class="kt-card-footer justify-between flex gap-5 text-secondary-foreground text-sm font-medium">
+                    <div class="">
+                        {{
+                            ((currentPage - 1) * data.size + 1)
+                            + ' - ' +
+                            (currentPage * data.size > data.totalElements ? data.totalElements : currentPage * data.size)
+                            + ' ' + ('MODULES.GLOBAL.OF' | translate) + ' '  +
+                            data.totalElements
+                        }}
+                    </div>
+                    <ngb-pagination
+                            [collectionSize]="data?.totalElements"
+                            [pageSize]="data.size"
+                            [maxSize]="5"
+                            [rotate]="true"
+                            [boundaryLinks]="true"
+                            [(page)]="currentPage">
+                    </ngb-pagination>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>

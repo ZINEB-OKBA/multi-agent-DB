@@ -1,0 +1,28 @@
+=== Exécution du Job Indexation du Tue 05/19/2026 à 15:40:12.95 === 
+The system cannot find the path specified.
+=== Fin d'exécution === 
+=== Exécution du Job Indexation du Tue 05/19/2026 à 15:41:23.91 === 
+The system cannot find the path specified.
+=== Fin d'exécution === 
+=== Exécution du Job Indexation du Tue 05/19/2026 à 16:41:00.90 === 
+Traceback (most recent call last):
+  File "C:\Users\hp\Desktop\documenting-agent\backend\cron_index.py", line 156, in <module>
+    index_documents_job()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\hp\Desktop\documenting-agent\backend\cron_index.py", line 34, in index_documents_job
+    conn = get_db_connection()
+  File "C:\Users\hp\Desktop\documenting-agent\backend\cron_index.py", line 26, in get_db_connection
+    return psycopg2.connect(
+           ~~~~~~~~~~~~~~~~^
+        host=DB_HOST,
+        ^^^^^^^^^^^^^
+    ...<2 lines>...
+        password=DB_PASSWORD
+        ^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\hp\Desktop\documenting-agent\.venv\Lib\site-packages\psycopg2\__init__.py", line 135, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "localhost" (::1), port 5432 failed: FATAL:  database "motul_db" does not exist
+
+=== Fin d'exécution === 

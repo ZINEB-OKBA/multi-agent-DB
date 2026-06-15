@@ -1,0 +1,115 @@
+<div class="kt-container-fluid">
+
+    <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-3">
+            <img
+                    src="assets/media/images/bank_al_maghrib.png"
+                    alt="Bank Al-Maghrib"
+                    class="h-10 object-contain"
+            />
+        </div>
+
+        <button
+                class="kt-btn kt-btn-light bg-gray-100 text-gray-600 hover:bg-gray-200"
+                (click)="navigate('')">
+            <i class="ki-filled ki-home text-lg"></i>
+            <span>{{ 'MODULES.BUTTONS.BACK' | translate }}</span>
+        </button>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5 lg:gap-7.5">
+
+        <div
+                class="kt-card flex flex-col gap-5 p-5 lg:p-7.5 w-full cursor-pointer hover:shadow-lg transition-shadow"
+                (click)="navigate('bande-fluctuation')">
+
+            <p class="text-base font-bold text-mono">
+                {{ 'MODULES.BKAM_LANDING.CARDS.BANDE_FLUCTUATION.TITLE' | translate }}
+            </p>
+
+            <p class="text-sm text-secondary-foreground">
+                {{ 'MODULES.BKAM_LANDING.CARDS.BANDE_FLUCTUATION.DESCRIPTION' | translate }}
+            </p>
+        </div>
+
+        <div
+                class="kt-card flex flex-col gap-5 p-5 lg:p-7.5 w-full cursor-pointer hover:shadow-lg transition-shadow"
+                (click)="navigate('cours-billet')">
+
+            <p class="text-base font-bold text-mono">
+                {{ 'MODULES.BKAM_LANDING.CARDS.COURS_BILLET.TITLE' | translate }}
+            </p>
+
+            <p class="text-sm text-secondary-foreground">
+                {{ 'MODULES.BKAM_LANDING.CARDS.COURS_BILLET.DESCRIPTION' | translate }}
+            </p>
+        </div>
+
+        <div
+                class="kt-card flex flex-col gap-5 p-5 lg:p-7.5 w-full cursor-pointer hover:shadow-lg transition-shadow"
+                (click)="navigate('historique-decision')">
+
+            <p class="text-base font-bold text-mono">
+                {{ 'MODULES.BKAM_LANDING.CARDS.HISTORIQUE_DECISION.TITLE' | translate }}
+            </p>
+
+            <p class="text-sm text-secondary-foreground">
+                {{ 'MODULES.BKAM_LANDING.CARDS.HISTORIQUE_DECISION.DESCRIPTION' | translate }}
+            </p>
+        </div>
+
+        <div
+                class="kt-card flex flex-col gap-5 p-5 lg:p-7.5 w-full cursor-pointer hover:shadow-lg transition-shadow"
+                (click)="navigate('indice-monia')">
+
+            <p class="text-base font-bold text-mono">
+                {{ 'MODULES.BKAM_LANDING.CARDS.INDICE_MONIA.TITLE' | translate }}
+            </p>
+
+            <p class="text-sm text-secondary-foreground">
+                {{ 'MODULES.BKAM_LANDING.CARDS.INDICE_MONIA.DESCRIPTION' | translate }}
+            </p>
+        </div>
+
+        <div
+                class="kt-card flex flex-col gap-5 p-5 lg:p-7.5 w-full cursor-pointer hover:shadow-lg transition-shadow"
+                (click)="navigate('marche-monetaire')">
+
+            <p class="text-base font-bold text-mono">
+                {{ 'MODULES.BKAM_LANDING.CARDS.MARCHE_MONETAIRE.TITLE' | translate }}
+            </p>
+
+            <p class="text-sm text-secondary-foreground">
+                {{ 'MODULES.BKAM_LANDING.CARDS.MARCHE_MONETAIRE.DESCRIPTION' | translate }}
+            </p>
+        </div>
+
+        <!-- Taux de référence -->
+        <div
+                class="kt-card flex flex-col gap-5 p-5 lg:p-7.5 w-full cursor-pointer hover:shadow-lg transition-shadow"
+                (click)="navigate('reference-rates')">
+
+            <p class="text-base font-bold text-mono">
+                {{ 'MODULES.BKAM_LANDING.CARDS.TAUX_REFERENCE.TITLE' | translate }}
+            </p>
+
+            <p class="text-sm text-secondary-foreground">
+                {{ 'MODULES.BKAM_LANDING.CARDS.TAUX_REFERENCE.DESCRIPTION' | translate }}
+            </p>
+        </div>
+
+        <div
+                class="kt-card flex flex-col gap-5 p-5 lg:p-7.5 w-full cursor-pointer hover:shadow-lg transition-shadow"
+                (click)="navigate('operations-principales')">
+
+            <p class="text-base font-bold text-mono">
+                {{ 'MODULES.BKAM_LANDING.CARDS.OPERATIONS_PRINCIPALES.TITLE' | translate }}
+            </p>
+
+            <p class="text-sm text-secondary-foreground">
+                {{ 'MODULES.BKAM_LANDING.CARDS.OPERATIONS_PRINCIPALES.DESCRIPTION' | translate }}
+            </p>
+        </div>
+
+    </div>
+</div>

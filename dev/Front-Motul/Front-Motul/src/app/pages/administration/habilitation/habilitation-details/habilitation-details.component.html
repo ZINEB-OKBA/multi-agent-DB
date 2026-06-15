@@ -1,0 +1,153 @@
+<form [formGroup]="form"  class="flex grow gap-5 lg:gap-7.5">
+    <div class="flex flex-col items-stretch grow gap-5 lg:gap-7.5">
+        <div class="kt-card pb-2.5">
+            <div class="kt-card-header">
+                <h3 class="kt-card-title">{{ 'MODULES.HABILITATIONS.FORM.TITLE' | translate }}</h3>
+            </div>
+            <div class="kt-card-content grid gap-5">
+                <div class="flex flex-wrap lg:flex-nowrap gap-5">
+                    <!-- Name -->
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3">
+                            <label for="name" class="labelForm w-20 text-right">{{ 'MODULES.HABILITATIONS.FORM.NAME' | translate }}</label>
+                            <div class="grow">
+                                <input formControlName="name" placeholder="{{ 'MODULES.HABILITATIONS.FORM.MODULE_PLACEHOLDER' | translate }}" id="name" class="kt-input w-full" type="text" />
+                                <div *ngIf="isFieldInvalid('name')" class="text-red-500 text-sm mt-1">{{ 'MODULES.HABILITATIONS.FORM.REQUIRED' | translate }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Module -->
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3">
+                            <label class="labelForm w-20 text-right">{{ 'MODULES.HABILITATIONS.FORM.MODULE' | translate }}</label>
+                            <div class="grow">
+                                <ng-select
+                                        [items]="modulesList"
+                                        bindLabel="libelle"
+                                        [(ngModel)]="module"
+                                        [ngModelOptions]="{standalone: true}"
+                                        (change)="loadRoles(module)"
+                                        placeholder="{{ 'MODULES.HABILITATIONS.FORM.MODULE_PLACEHOLDER' | translate }}"
+                                        [searchable]="true"
+                                        [clearable]="true">
+
+                                    <!-- Template for dropdown items -->
+                                    <ng-template ng-option-tmp let-item="item">
+                                        {{ 'MODULES.HABILITATIONS.MODULES.' + item.libelle | translate }}
+                                    </ng-template>
+
+                                    <!-- Template for selected item -->
+                                    <ng-template ng-label-tmp let-item="item">
+                                        {{ 'MODULES.HABILITATIONS.MODULES.' + item.libelle | translate }}
+                                    </ng-template>
+                                </ng-select>
+                                <div *ngIf="isFieldInvalid('terminal.id')" class="text-red-500 text-sm mt-1">{{ 'MODULES.HABILITATIONS.FORM.REQUIRED' | translate }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rôle -->
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3">
+                            <label class="labelForm w-20 text-right">{{ 'MODULES.HABILITATIONS.FORM.ROLE' | translate }}</label>
+                            <div class="grow">
+                                <ng-select
+                                        [items]="rolesList"
+                                        bindLabel="identifiant"
+                                        [(ngModel)]="role"
+                                        [ngModelOptions]="{standalone: true}"
+                                        placeholder="{{ 'MODULES.HABILITATIONS.FORM.ROLE_PLACEHOLDER' | translate }}"
+                                        [searchable]="true"
+                                        [clearable]="true">
+
+                                    <!-- Template for dropdown items -->
+                                    <ng-template ng-option-tmp let-item="item">
+                                        {{ ('MODULES.HABILITATIONS.ROLES.' + item.identifiant) | translate }}
+                                    </ng-template>
+
+                                    <!-- Template for selected item -->
+                                    <ng-template ng-label-tmp let-item="item">
+                                        {{ ('MODULES.HABILITATIONS.ROLES.' + item.identifiant) | translate }}
+                                    </ng-template>
+
+                                </ng-select>
+                                <div *ngIf="isFieldInvalid('terminal.id')" class="text-red-500 text-sm mt-1">{{ 'MODULES.HABILITATIONS.FORM.REQUIRED' | translate }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bouton -->
+                    <div>
+                        <button class="kt-btn kt-btn-primary" (click)="onAddRole()" [disabled]="!role">
+                            <i class="ki-filled ki-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="kt-card-content">
+                <div>
+                    <div class="kt-scrollable-x-auto">
+                        <table class="kt-table table-auto kt-table-border">
+                            <thead>
+                            <ng-template #sortableHeader let-column="column" let-label="label">
+                                <th class="min-w-[180px]">
+                        <span class="kt-table-col">
+                          <span class="kt-table-col-label">
+                            {{ label }}
+                          </span>
+                        </span>
+                                </th>
+                            </ng-template>
+                            <tr>
+                                <ng-container
+                                        *ngTemplateOutlet="sortableHeader; context: { column: 'module', label: ('MODULES.HABILITATIONS.COLUMNS.MODULE' | translate) }"></ng-container>
+                                <ng-container
+                                        *ngTemplateOutlet="sortableHeader; context: { column: 'role', label: ('MODULES.HABILITATIONS.COLUMNS.ROLE' | translate) }"></ng-container>
+                                <th class="w-[60px]"></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr *ngFor="let element of form.value.roles">
+                                <td class="text-foreground font-normal" width="15%">{{ ('MODULES.HABILITATIONS.MODULES.' + element.module?.libelle) | translate }}</td>
+                                <td class="text-foreground font-normal">{{ ('MODULES.HABILITATIONS.ROLES.' + element.identifiant) | translate }}</td>
+                                <td class="text-center">
+                                    <a class="kt-menu-link flex justify-center" (click)="onDelete(element)">
+                                        <span class="kt-menu-icon">
+                                            <i class="ki-filled ki-trash text-red-500"></i>
+                                        </span>
+                                    </a>
+                                </td>
+                            </tr>
+
+                            <tr *ngIf="form.value.roles?.length === 0">
+                                <td colspan="4" class="text-center text-gray-500 py-4">
+                                    {{ 'MODULES.HABILITATIONS.FORM.NO_DATA' | translate }}
+                                </td>
+                            </tr>
+
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kt-card-footer flex justify-between">
+                <button type="button" (click)="onCancel()" class="kt-btn kt-btn-outline kt-btn-destructive">
+                    <i class="ki-filled ki-left"></i>
+                    {{ 'MODULES.BUTTONS.CANCEL' | translate }}
+                </button>
+                <button
+                        type="submit"
+                        class="kt-btn kt-btn-primary"
+                >
+                    <i class="ki-filled ki-check-circle"></i>
+                    <span (click)="onSubmit()">{{ 'MODULES.BUTTONS.SAVE' | translate }}</span>
+                </button>
+
+            </div>
+        </div>
+    </div>
+</form>

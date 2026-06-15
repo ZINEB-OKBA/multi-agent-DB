@@ -1,0 +1,151 @@
+<form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex grow gap-5 lg:gap-7.5">
+    <div class="flex flex-col items-stretch grow gap-5 lg:gap-7.5">
+        <div class="kt-card pb-2.5">
+            <div class="kt-card-header">
+                <h3 class="kt-card-title">{{ 'MODULES.USERS.FORM.TITLE' | translate }}</h3>
+            </div>
+            <div class="kt-card-content grid gap-5">
+                <div class="flex gap-5">
+                    <!-- Name  -->
+                    <div class="flex-1">
+                        <div class="flex items-baseline flex-wrap lg:flex-nowrap gap-3 ">
+                            <div class="labelForm w-20 text-right text-nowrap">
+                                <label for="name" >{{ 'MODULES.USERS.FORM.LAST_NAME' | translate }}</label>
+                                <span class="text-danger">*</span>
+                            </div>
+                            <div class="grow">
+                                <input formControlName="firstName" [placeholder]="'MODULES.USERS.FORM.LAST_NAME_PLACEHOLDER' | translate" id="firstName" class="kt-input w-full" type="text" />
+                                <div *ngIf="isFieldInvalid('firstName')" class="text-red-500 text-sm mt-1">
+                                    {{ 'MODULES.USERS.FORM.REQUIRED' | translate }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- prenom  -->
+                    <div class="flex-1">
+                        <div class="flex items-baseline flex-wrap lg:flex-nowrap gap-3 ">
+                            <div class="labelForm w-20 text-right">
+                                <label for="prenom" class="labelForm ">{{ 'MODULES.USERS.FORM.FIRST_NAME' | translate }}</label>
+                                <span class="text-danger">*</span>
+                            </div>                            <div class="grow">
+                                <input formControlName="lastName" [placeholder]="'MODULES.USERS.FORM.FIRST_NAME_PLACEHOLDER' | translate" id="lastName" class="kt-input w-full" type="text" />
+                                <div *ngIf="isFieldInvalid('lastName')" class="text-red-500 text-sm mt-1">
+                                    {{ 'MODULES.USERS.FORM.REQUIRED' | translate }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="flex gap-5">
+                    <!-- email  -->
+                    <div class="flex-1">
+                        <div class="flex items-baseline flex-wrap lg:flex-nowrap gap-3 ">
+                            <div class="labelForm w-20 text-right">
+                                <label for="email" class="labelForm ">{{ 'MODULES.USERS.FORM.EMAIL' | translate }}</label>
+                                <span class="text-danger">*</span>
+                            </div>                            <div class="grow">
+                                <input formControlName="email" [placeholder]="'MODULES.USERS.FORM.FIRST_NAME_PLACEHOLDER' | translate" id="email" class="kt-input w-full" type="text" />
+                                <div *ngIf="isFieldInvalid('email')" class="text-red-500 text-sm mt-1">
+                                    {{ 'MODULES.USERS.FORM.REQUIRED' | translate }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- phone  -->
+                    <div class="flex-1">
+                        <div class="flex items-baseline flex-wrap lg:flex-nowrap gap-3 ">
+                            <div class="labelForm w-20 text-right">
+                                <label for="phone" class="labelForm ">{{ 'MODULES.USERS.FORM.PHONE' | translate }}</label>
+                                <span class="text-danger">*</span>
+                            </div>                            <div class="grow">
+                                <input formControlName="phone" [placeholder]="'MODULES.USERS.FORM.PHONE_PLACEHOLDER' | translate" class="kt-input w-full" type="text" />
+                                <div *ngIf="isFieldInvalid('phone')" class="text-red-500 text-sm mt-1">
+                                    {{ 'MODULES.USERS.FORM.REQUIRED' | translate }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex gap-5">
+                    <!-- profil   -->
+                    <div class="flex-1">
+                        <div class="flex  lg:flex-nowrap flex-wrap gap-3">
+                            <div class="labelForm w-20 text-right">
+                                <label class="labelForm ">{{ 'MODULES.USERS.FORM.PROFILE' | translate }}</label>
+                                <span class="text-danger">*</span>
+                            </div>
+                            <div class="grow">
+                                <ng-select
+                                        [items]="profileList"
+                                        bindLabel="name"
+                                        [compareWith]="compareFn"
+                                        formControlName="profile"
+                                        [placeholder]="'MODULES.USERS.FORM.PROFILE_PLACEHOLDER' | translate"
+                                        class="ng-select">
+                                    <ng-template ng-option-tmp let-item="item">
+                                        <div class="flex items-center gap-2">
+                                            <span>{{ item.name }}</span>
+                                        </div>
+                                    </ng-template>
+                                </ng-select>
+
+
+                                <div *ngIf="isFieldInvalid('profile')" class="text-red-500 text-sm mt-1">
+                                    {{ 'MODULES.USERS.FORM.REQUIRED' | translate }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- status  -->
+                    <div class="flex-1">
+                        <div class="flex lg:flex-nowrap flex-wrap gap-3">
+                            <div class="labelForm w-20 text-right">
+                                <label class="labelForm ">{{ 'MODULES.USERS.FORM.STATUS' | translate }}</label>
+                                <span class="text-danger">*</span>
+                            </div>
+                            <div class="grow">
+                                <ng-select
+                                        id="status"
+                                        formControlName="enabled"
+                                        [items]="[
+          { label: 'Actif', value: true },
+          { label: 'Inactif', value: false }
+        ]"
+                                        bindLabel="label"
+                                        bindValue="value"
+                                        [placeholder]="'MODULES.USERS.FORM.STATUS_PLACEHOLDER' | translate"
+                                        class="ng-select"
+                                >
+                                    <ng-template ng-option-tmp let-item="item">
+                                        <div class="flex items-center gap-2">
+                                            <span>{{ item.label }}</span>
+                                        </div>
+                                    </ng-template>
+                                </ng-select>
+
+                                <div *ngIf="isFieldInvalid('enabled')" class="text-red-500 text-sm mt-1">
+                                    {{ 'MODULES.USERS.FORM.REQUIRED' | translate }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="kt-card-footer flex justify-between">
+                <button type="button" (click)="onCancel()" class="kt-btn kt-btn-outline kt-btn-destructive">
+                    <i class="ki-filled ki-left"></i>
+                    {{ 'MODULES.BUTTONS.CANCEL' | translate }}
+                </button>
+                <button type="submit" class="kt-btn kt-btn-primary" >
+                    <i class="ki-filled ki-check-circle" ></i>
+                    <span>{{ 'MODULES.BUTTONS.SAVE' | translate }}</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</form>

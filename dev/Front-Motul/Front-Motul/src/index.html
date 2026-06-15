@@ -1,0 +1,57 @@
+<!doctype html>
+<html class="h-full" data-kt-theme="true" data-kt-theme-mode="light" dir="ltr" lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Documents-Agent</title>
+    <base href="/">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link rel="icon" type="image/png" href="assets/media/images/motul.png">
+
+    <style>
+        :root {
+            --primary-color: #708238;       /* Vert Olive Principal (Boutons, Headers, Active Dropdown) */
+            --primary-hover: #556B2F;       /* Vert Olive Foncé (Effets de survol) */
+            --primary-light: #F4F6F0;       /* Vert Olive Ultra-Léger (Fonds des bulles de chat IA) */
+            --text-on-primary: #FFFFFF;     /* Texte blanc sur fond olive */
+            --border-color: #D2D7C4;        /* Séparateurs et contours de cartes */
+        }
+
+        /* Correction de la petite faute de frappe sur le body original (h-ull -> h-full) */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FAFAFA;
+        }
+    </style>
+</head>
+<body class="h-full">
+
+<script>
+    const defaultThemeMode = 'light'; // light|dark|system
+    let themeMode;
+
+    if (document.documentElement) {
+        if (localStorage.getItem('kt-theme')) {
+            themeMode = localStorage.getItem('kt-theme');
+        } else if (
+            document.documentElement.hasAttribute('data-kt-theme-mode')
+        ) {
+            themeMode =
+                document.documentElement.getAttribute('data-kt-theme-mode');
+        } else {
+            themeMode = defaultThemeMode;
+        }
+
+        if (themeMode === 'system') {
+            themeMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light';
+        }
+
+        document.documentElement.classList.add(themeMode);
+    }
+</script>
+<app-root></app-root>
+
+</body>
+</html>

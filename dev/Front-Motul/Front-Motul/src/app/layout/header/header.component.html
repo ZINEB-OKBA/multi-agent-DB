@@ -1,0 +1,121 @@
+<!-- Header -->
+<header class="flex items-center fixed z-10 top-0 left-0 right-0 shrink-0 h-(--header-height) bg-muted" id="header">
+  <!-- Container -->
+  <div class="kt-container-fluid flex justify-between items-stretch px-5 lg:ps-0 lg:gap-4" id="header_container">
+    <div class="flex items-center me-1">
+      <div class="flex items-center justify-center w-[70px] gap-1 shrink-0">
+        <button class="kt-btn kt-btn-icon kt-btn-ghost -ms-2 lg:hidden" data-kt-drawer-toggle="#sidebar">
+          <i class="ki-filled ki-menu">
+          </i>
+        </button>
+      </div>
+    </div>
+    <!-- End of Logo -->
+    <!-- Topbar -->
+    <div class="flex items-center lg:gap-3.5">
+      <!-- Action -->
+
+      <!-- End of Action -->
+      <!-- User -->
+      <div data-kt-dropdown="true" data-kt-dropdown-offset="10px, 10px" data-kt-dropdown-offset-rtl="-20px, 10px" data-kt-dropdown-placement="bottom-end" data-kt-dropdown-placement-rtl="bottom-start" data-kt-dropdown-trigger="click">
+          <div class="cursor-pointer shrink-0" data-kt-dropdown-toggle="true">
+              <img
+                      alt="Avatar utilisateur"
+                      class="size-9 rounded-full border-2 border-input shrink-0"
+                      [src]="user?.image?.startsWith('data:image') ? user.image : (user?.image ? 'data:image/jpeg;base64,' + user.image : 'assets/media/avatars/user.jpg')"
+              />
+
+          </div>
+        <div class="kt-dropdown-menu w-[250px]" data-kt-dropdown-menu="true">
+          <div class="flex items-center justify-between px-2.5 py-1.5 gap-1.5">
+            <div class="flex items-center gap-2">
+                <img alt="" class="size-9 rounded-full border-2 border-input shrink-0" [src]="user?.image ?'data:image/jpeg;base64,' + user.image: 'assets/media/avatars/user.jpg'"/>
+                <div class="flex flex-col gap-1.5">
+           <span class="text-sm text-foreground font-semibold leading-none">
+            {{user?.name}}
+           </span>
+                <a class="text-xs text-secondary-foreground hover:text-primary font-medium leading-none" href="javascript:void(0);">
+                  {{user?.email}}
+                </a>
+              </div>
+            </div>
+          </div>
+            <ul class="kt-dropdown-menu-sub">
+                <li>
+                    <div class="kt-dropdown-menu-separator">
+                    </div>
+                </li>
+                <li data-kt-dropdown="true" data-kt-dropdown-placement="right-start" data-kt-dropdown-trigger="hover">
+                    <button class="kt-dropdown-menu-toggle py-1" data-kt-dropdown-toggle="true">
+           <span class="flex items-center gap-2">
+            <i class="ki-filled ki-icon">
+            </i>
+               {{ 'MODULES.USER-MENU.LANGUAGE' | translate }}
+           </span>
+                        <span *ngIf="this.currentLanguage === 'en'" class="ms-auto kt-badge kt-badge-stroke shrink-0">
+            {{ 'MODULES.USER-MENU.LANG_EN' | translate }}
+                            <img alt="" class="inline-block size-3.5 rounded-full" src="assets/media/flags/united-states.svg"/>
+           </span>
+                        <span *ngIf="this.currentLanguage === 'fr'" class="ms-auto kt-badge kt-badge-stroke shrink-0">
+            {{ 'MODULES.USER-MENU.LANG_FR' | translate }}
+                            <img alt="" class="inline-block size-3.5 rounded-full" src="assets/media/flags/france.svg"/>
+           </span>
+                    </button>
+                    <div class="kt-dropdown-menu w-[180px]" data-kt-dropdown-menu="true">
+                        <ul class="kt-dropdown-menu-sub">
+                            <li class="active">
+                                <a class="kt-dropdown-menu-link" (click)="useLanguage('en')">
+              <span class="flex items-center gap-2">
+               <img alt="" class="inline-block size-4 rounded-full" src="assets/media/flags/united-states.svg"/>
+               <span class="kt-menu-title">
+                {{ 'MODULES.USER-MENU.LANG_EN' | translate }}
+               </span>
+              </span>
+                                    <i *ngIf="this.currentLanguage === 'en'" class="ki-solid ki-check-circle ms-auto text-green-500 text-base">
+                                    </i>
+                                </a>
+                            </li>
+                            <li class="active">
+                                <a class="kt-dropdown-menu-link" (click)="useLanguage('fr')">
+              <span class="flex items-center gap-2">
+               <img alt="" class="inline-block size-4 rounded-full" src="assets/media/flags/france.svg"/>
+               <span class="kt-menu-title">
+                {{ 'MODULES.USER-MENU.LANG_FR' | translate }}
+               </span>
+              </span>
+                                    <i *ngIf="this.currentLanguage === 'fr'" class="ki-solid ki-check-circle ms-auto text-green-500 text-base">
+                                    </i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+                <li>
+                    <div class="kt-dropdown-menu-separator">
+                    </div>
+                </li>
+            </ul>
+          <div class="px-2.5 pt-1.5 mb-2.5 flex flex-col gap-3.5">
+            <div class="flex items-center gap-2 justify-between">
+          <span class="flex items-center gap-2">
+           <i class="ki-filled ki-moon text-base text-muted-foreground">
+           </i>
+           <span class="font-medium text-2sm">
+            Mode sombre
+           </span>
+          </span>
+              <input class="kt-switch" data-kt-theme-switch-state="dark" data-kt-theme-switch-toggle="true" name="check" type="checkbox" value="1"/>
+            </div>
+            <a class="kt-btn kt-btn-outline justify-center w-full" (click)="onLogout()">
+                Déconnexion
+            </a>
+          </div>
+        </div>
+      </div>
+      <!-- End of User -->
+    </div>
+    <!-- End of Topbar -->
+  </div>
+  <!-- End of Container -->
+</header>
+<!-- End of Header -->

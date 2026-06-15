@@ -1,0 +1,82 @@
+<div class="kt-container-fluid">
+    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5 lg:gap-7.5">
+        <!--First card-->
+        <div class="kt-card flex flex-col gap-5 p-5 lg:p-7.5 w-full cursor-pointer hover:shadow-lg transition-shadow" (click)="navigate('asfim-landing')">
+            <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="relative size-[49px] shrink-0">
+                        <img
+                                src="assets/media/images/asfim.png"
+                                alt="Bank Al-Maghrib"
+                                class="h-7 object-contain"
+                        />
+                    </div>
+                    <div class="flex flex-col">
+                        <p class="text-base font-medium text-mono hover:text-primary mb-px">
+                            {{ 'MODULES.DATA_SOURCES.ASFIM.TITLE' | translate }}
+                        </p>
+                        <span class="text-sm text-secondary-foreground">
+                    {{ 'MODULES.DATA_SOURCES.ASFIM.SUBTITLE' | translate }}
+                </span>
+                    </div>
+                </div>
+            </div>
+            <p class="text-sm text-secondary-foreground flex-grow">
+                {{ 'MODULES.DATA_SOURCES.ASFIM.DESCRIPTION' | translate }}
+            </p>
+        </div>
+
+        <!--Second card-->
+        <div class="kt-card flex flex-col gap-5 p-5 lg:p-7.5 w-full cursor-pointer hover:shadow-lg transition-shadow" (click)="navigate('ammc')">
+            <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="relative size-[49px] shrink-0">
+                        <img
+                                src="assets/media/images/ammc.png"
+                                alt="Bank Al-Maghrib"
+                                class="h-10 object-contain"
+                        />
+                    </div>
+                    <div class="flex flex-col">
+                        <p class="text-base font-medium text-mono hover:text-primary mb-px">
+                            {{ 'MODULES.DATA_SOURCES.AMMC.TITLE' | translate }}
+                        </p>
+                        <span class="text-sm text-secondary-foreground">
+                    {{ 'MODULES.DATA_SOURCES.AMMC.SUBTITLE' | translate }}
+                </span>
+                    </div>
+                </div>
+            </div>
+            <p class="text-sm text-secondary-foreground flex-grow">
+                {{ 'MODULES.DATA_SOURCES.AMMC.DESCRIPTION' | translate }}
+            </p>
+        </div>
+
+        <!--Third card-->
+        <div class="kt-card flex flex-col gap-5 p-5 lg:p-7.5 w-full cursor-pointer hover:shadow-lg transition-shadow" (click)="navigate('bkam-landing')">
+            <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="relative size-[49px] shrink-0">
+                        <img
+                                src="assets/media/images/bank_al_maghrib.png"
+                                alt="Bank Al-Maghrib"
+                                class="h-10 object-contain"
+                        />
+                    </div>
+                    <div class="flex flex-col">
+                        <p class="text-base font-medium text-mono hover:text-primary mb-px">
+                            {{ 'MODULES.DATA_SOURCES.BKAM.TITLE' | translate }}
+                        </p>
+                        <span class="text-sm text-secondary-foreground">
+                    {{ 'MODULES.DATA_SOURCES.BKAM.SUBTITLE' | translate }}
+                </span>
+                    </div>
+                </div>
+            </div>
+            <p class="text-sm text-secondary-foreground flex-grow">
+                {{ 'MODULES.DATA_SOURCES.BKAM.DESCRIPTION' | translate }}
+            </p>
+        </div>
+
+    </div>
+</div>

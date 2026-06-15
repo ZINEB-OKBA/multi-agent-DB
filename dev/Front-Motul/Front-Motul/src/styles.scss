@@ -1,0 +1,92 @@
+/* ===== OLIVE OVERRIDE — colle ceci EN TOUT PREMIER dans style.css ===== */
+
+/* 1. Variables racine — écrase Bootstrap, KeenThemes, Tailwind */
+:root,
+[data-bs-theme],
+[data-theme],
+[class*="theme-"] {
+  --primary:             #708238 !important;
+  --primary-rgb:         112, 130, 56 !important;
+  --danger:              #708238 !important;
+  --danger-rgb:          112, 130, 56 !important;
+  --bs-primary:          #708238 !important;
+  --bs-primary-rgb:      112, 130, 56 !important;
+  --bs-danger:           #708238 !important;
+  --bs-danger-rgb:       112, 130, 56 !important;
+  --kt-primary:          #708238 !important;
+  --kt-danger:           #708238 !important;
+  --kt-danger-active:    #556B2F !important;
+  --color-primary:       #708238 !important;
+  --color-danger:        #708238 !important;
+}
+
+/* 2. Sélecteur universel — attrape TOUT ce qui est rouge/danger */
+*[class*="bg-red"],
+*[class*="bg-danger"],
+*[class*="btn-danger"],
+*[class*="btn-primary"],
+*[class*="background-red"],
+*[style*="background-color: #"],
+button[class*="red"],
+a[class*="red"] {
+  background-color: #708238 !important;
+  border-color:     #708238 !important;
+}
+
+/* 3. Boutons Bootstrap — écrase aussi les variables internes */
+.btn-danger,
+.btn-primary {
+  --bs-btn-bg:           #708238 !important;
+  --bs-btn-border-color: #708238 !important;
+  --bs-btn-hover-bg:     #556B2F !important;
+  --bs-btn-active-bg:    #4a5f28 !important;
+  background-color:      #708238 !important;
+  border-color:          #708238 !important;
+  color:                 #fff    !important;
+}
+.btn-danger:hover,
+.btn-primary:hover {
+  background-color: #556B2F !important;
+  border-color:     #556B2F !important;
+}
+
+/* 4. Texte rouge → vert olive */
+*[class*="text-red"],
+*[class*="text-danger"],
+.text-red-500,
+.text-red-600,
+.text-danger {
+  color: #708238 !important;
+}
+
+/* 5. Icônes et éléments SVG rouges */
+*[class*="text-red"] i,
+*[class*="text-danger"] i,
+.fa-paper-plane,
+svg *[fill="#dc3545"],
+svg *[fill="red"] {
+  color: #708238 !important;
+  fill:  #708238 !important;
+}
+
+/* 6. Tailwind v4 spécifique */
+.bg-red-400, .bg-red-500, .bg-red-600,
+.bg-red-700, .bg-red-800 {
+  --tw-bg-opacity: 1;
+  background-color: #708238 !important;
+}
+
+/* 7. Focus rings (input outlines rouges) */
+*:focus,
+*:focus-visible {
+  --bs-focus-ring-color: rgba(112, 130, 56, 0.25) !important;
+  outline-color: #708238 !important;
+}
+
+/* 8. Liens actifs/sélectionnés */
+.nav-link.active,
+.active > .nav-link,
+a.active {
+  color: #708238 !important;
+  border-color: #708238 !important;
+}

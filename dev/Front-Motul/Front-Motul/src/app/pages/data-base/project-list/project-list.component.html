@@ -1,0 +1,118 @@
+<div class="kt-container-fluid">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-5">
+        <div>
+            <h2 class="text-2xl font-bold text-mono">Projets</h2>
+            <p class="text-sm text-secondary-foreground">Sélectionnez un projet pour accéder à ses documents</p>
+        </div>
+        <button class="kt-btn kt-btn-primary" (click)="openCreateModal()">
+            <i class="ki-filled ki-plus"></i>
+            Nouveau projet
+        </button>
+    </div>
+
+    <!-- État de chargement -->
+    <div *ngIf="isLoading" class="flex justify-center py-16">
+        <div class="flex items-center gap-2 text-secondary-foreground">
+            <i class="ki-filled ki-loading animate-spin text-xl"></i>
+            <span>Chargement des projets...</span>
+        </div>
+    </div>
+
+    <!-- Grille de cards projets -->
+    <div *ngIf="!isLoading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+
+        <div *ngFor="let project of projects"
+             class="kt-card flex flex-col gap-4 p-6 cursor-pointer hover:shadow-lg hover:border-primary transition-all duration-200 group relative"
+             (click)="selectProject(project)">
+
+            <!-- Icône + Nom -->
+            <div class="flex items-start gap-3">
+                <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <i class="ki-filled ki-folder text-primary text-lg"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-base font-bold text-mono group-hover:text-primary truncate">
+                        {{ project.name }}
+                    </p>
+                    <p *ngIf="project.description" class="text-xs text-secondary-foreground mt-0.5 line-clamp-2">
+                        {{ project.description }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Date de création -->
+            <div class="flex items-center gap-1.5 text-xs text-secondary-foreground mt-auto">
+                <i class="ki-filled ki-calendar text-xs"></i>
+                <span *ngIf="project.createdAt">{{ project.createdAt | date:'dd/MM/yyyy' }}</span>
+                <span *ngIf="!project.createdAt">—</span>
+            </div>
+
+            <!-- Bouton supprimer (apparaît au hover) -->
+            <button
+                    class="absolute top-3 right-3 btn btn-icon btn-sm btn-light-danger transition-opacity"
+                    (click)="deleteProject($event, project.id)"
+                    title="Supprimer le projet">
+                <i class="ki-filled ki-trash text-sm text-danger"></i>
+            </button>
+        </div>
+
+        <!-- Empty state -->
+        <div *ngIf="projects.length === 0"
+             class="col-span-full flex flex-col items-center justify-center py-20 text-secondary-foreground">
+            <i class="ki-filled ki-folder text-5xl mb-4 opacity-30"></i>
+            <p class="text-base font-medium">Aucun projet pour l'instant</p>
+            <p class="text-sm mt-1">Créez votre premier projet pour commencer</p>
+            <button class="kt-btn kt-btn-primary mt-5" (click)="openCreateModal()">
+                <i class="ki-filled ki-plus"></i>
+                Créer un projet
+            </button>
+        </div>
+
+    </div>
+</div>
+
+
+<!-- ══ MODALE CRÉATION DE PROJET ═══════════════════════════════════════════ -->
+
+<div *ngIf="showCreateModal" class="modal-backdrop show"></div>
+<div *ngIf="showCreateModal" class="modal show block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nouveau projet</h5>
+                <button type="button" class="btn-close" (click)="closeCreateModal()"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-4">
+                    <label class="form-label font-bold">Nom du projet *</label>
+                    <input
+                            type="text"
+                            class="kt-input w-full"
+                            [(ngModel)]="createForm.name"
+                            placeholder="Ex: Outils-RH, Finance-2024..."
+                            (keydown.enter)="submitCreate()">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label font-bold">Description</label>
+                    <textarea
+                            class="kt-input w-full"
+                            rows="3"
+                            [(ngModel)]="createForm.description"
+                            placeholder="Description optionnelle du projet..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="kt-btn kt-btn-light" (click)="closeCreateModal()">Annuler</button>
+                <button
+                        class="kt-btn kt-btn-primary"
+                        [disabled]="!createForm.name.trim() || isCreating"
+                        (click)="submitCreate()">
+                    <i *ngIf="isCreating" class="ki-filled ki-loading animate-spin mr-1"></i>
+                    Créer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

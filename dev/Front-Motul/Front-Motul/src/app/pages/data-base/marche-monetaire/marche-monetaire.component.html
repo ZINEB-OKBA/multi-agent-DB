@@ -1,0 +1,168 @@
+<div class="kt-container-fluid">
+
+    <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-semibold text-mono">
+
+        </h2>
+
+        <button
+                class="kt-btn kt-btn-light bg-gray-100 text-gray-600 hover:bg-gray-200"
+                (click)="navigate()">
+            <i class="ki-filled ki-home text-lg"></i>
+            <span>{{ 'MODULES.BUTTONS.BACK' | translate }}</span>
+        </button>
+    </div>
+
+    <div class="grid gap-5 lg:gap-7.5 mb-3" *ngIf="showAdvancedSearch">
+        <div class="kt-card kt-card-grid min-w-full">
+
+            <div class="kt-card-header flex-wrap gap-2">
+                <h3 class="kt-card-title text-sm">
+                    {{ 'MODULES.TICKETS.FILTER_TITLE' | translate }}
+                </h3>
+            </div>
+
+            <div class="kt-card-content">
+
+                <div class="grid grid-cols-8 gap-4 mt-4 mb-4 ml-2 mr-2">
+
+                    <div class="col-span-2">
+                        <input
+                                [(ngModel)]="startDate"
+                                class="kt-input w-full"
+                                type="date"
+                                placeholder="Date dépôt (du)"
+                        />
+                    </div>
+
+                    <div class="col-span-2">
+                        <input
+                                [(ngModel)]="endDate"
+                                class="kt-input w-full"
+                                type="date"
+                                placeholder="Date dépôt (au)"
+                        />
+                    </div>
+
+                    <div class="col-span-4"></div>
+
+                </div>
+
+            </div>
+
+            <div class="kt-card-footer flex justify-between">
+                <button
+                        type="button"
+                        class="kt-btn kt-btn-outline kt-btn-secondary"
+                        (click)="resetFilters()"
+                >
+                    <i class="ki-filled ki-cross"></i>
+                    {{ 'MODULES.BUTTONS.RESET' | translate }}
+                </button>
+
+                <button
+                        type="button"
+                        class="kt-btn kt-btn-outline kt-btn-primary"
+                        (click)="onFind()"
+                >
+                    <i class="ki-filled ki-magnifier"></i>
+                    <span>{{ 'MODULES.BUTTONS.SEARCH' | translate }}</span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="grid gap-5 lg:gap-7.5">
+        <div class="kt-card kt-card-grid min-w-full">
+            <div class="kt-card-header flex-wrap gap-2">
+                <h3 class="kt-card-title text-sm">
+                    {{ 'MODULES.MARCHE_MONETAIRE.TITLE' | translate }}
+                </h3>
+                <div class="flex flex-wrap gap-2 lg:gap-5">
+                    <div>
+                        <a class="kt-link kt-link-underlined kt-link-dashed"
+                           (click)="handleShowAdvancedSearch()"
+                           [ngClass]="{'kt-link-dashed': showAdvancedSearch}"
+                           [ngStyle]="{'color': showAdvancedSearch ? 'var(--kt-text-muted)' : 'inherit'}">
+                            <ng-container *ngIf="!showAdvancedSearch">
+                                {{'MODULES.BUTTONS.SHOW_ADVANCED_SEARCH' | translate}}
+                            </ng-container>
+
+                            <ng-container *ngIf="showAdvancedSearch">
+                                {{'MODULES.BUTTONS.HIDE_ADVANCED_SEARCH' | translate}}
+                            </ng-container>
+                        </a>
+                    </div>
+                    <div class="flex">
+
+                    </div>
+                    <div class="flex flex-wrap gap-2.5">
+                        <button class="kt-btn  kt-btn-primary" (click)="onExport()">
+                            <i class="ki-filled ki-file-down"></i>
+                            {{ 'MODULES.BUTTONS.EXPORT' | translate }}
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+            <div class="kt-card-content">
+                <div>
+                    <div class="kt-scrollable-x-auto">
+                        <table class="kt-table table-auto kt-table-border">
+                            <thead>
+                            <tr>
+                                <th>{{ 'MODULES.MARCHE_MONETAIRE.TABLE.DATE' | translate }}</th>
+                                <th class="text-right">{{ 'MODULES.MARCHE_MONETAIRE.TABLE.TAUX_MOYEN_PONDERE' | translate }}</th>
+                                <th class="text-right">{{ 'MODULES.MARCHE_MONETAIRE.TABLE.VOLUME_JJ' | translate }}</th>
+                                <th class="text-right">{{ 'MODULES.MARCHE_MONETAIRE.TABLE.ENCOURS' | translate }}</th>
+                            </tr>
+                            </thead>
+
+                            <tbody>
+                            <tr *ngFor="let e of data?.content">
+
+                                <td class="font-medium text-nowrap">
+                                    {{ e.date | date:'dd/MM/yyyy' }}
+                                </td>
+
+                                <td class="text-right font-semibold">
+                                    {{ e.tauxMoyenPondere | percent:'1.2-4' }}
+                                </td>
+
+                                <td class="text-right">
+                                    {{ e.volumeJj ?? '-' }}
+                                </td>
+
+                                <td class="text-right">
+                                    {{ e.encours | number }}
+                                </td>
+
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div *ngIf="data?.totalElements > 0" class="kt-card-footer justify-between flex gap-5 text-secondary-foreground text-sm font-medium">
+                        <div class="">
+                            {{
+                                ((currentPage - 1) * data.size + 1)
+                                + ' - ' +
+                                (currentPage * data.size > data.totalElements ? data.totalElements : currentPage * data.size)
+                                + ' ' + ('MODULES.GLOBAL.OF' | translate) + ' '  +
+                                data.totalElements
+                            }}
+                        </div>
+                        <ngb-pagination
+                                [collectionSize]="data?.totalElements"
+                                [pageSize]="data.size"
+                                [maxSize]="5"
+                                [rotate]="true"
+                                [boundaryLinks]="true"
+                                [(page)]="currentPage">
+                        </ngb-pagination>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

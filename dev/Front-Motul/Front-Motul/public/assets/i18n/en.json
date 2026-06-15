@@ -1,0 +1,865 @@
+{
+  "MODULES": {
+    "LOGIN": {
+      "TITLE": "Sign in",
+      "IDENTIFIER": "Username",
+      "EMAIL_PLACEHOLDER": "email@email.com",
+      "PASSWORD": "Password",
+      "PASSWORD_PLACEHOLDER": "Password",
+      "FORGOT_PASSWORD": "Forgot password?",
+      "SUBMIT": "Sign in",
+
+      "ERRORS": {
+        "BAD_CREDENTIALS": "Incorrect email or password. Please try again!",
+        "LOCKED_USER": "User account is locked. Please reset your password"
+      },
+
+      "SLOGAN": "Accelerate your digital performance",
+      "SLOGAN_SUBTITLE": "Smarter insights, faster decisions — powered by your team"
+    },
+    "CHAT": {
+      "CONVERSATIONAL_ASSISTANT": "Conversational assistant",
+      "EMPTY_STATE": "What are you interested in today?",
+      "INPUT_PLACEHOLDER": "Write a message...",
+      "COPY_TEXT": "Copy text",
+      "COPY_TABLE": "Copy table",
+      "DOWNLOAD_EXCEL": "Download Excel"
+    },
+    "CHAT_SIDEBAR": {
+      "TITLE": "Conversation history",
+      "ADD_CONVERSATION": "Add conversation",
+      "SEARCH_PLACEHOLDER": "Search ...",
+
+      "ACTIONS": {
+        "DELETE": "Delete",
+        "RENAME": "Rename"
+      }
+    },
+
+    "RESET_PASSWORD": {
+      "TITLE": "Reset password",
+      "SUBTITLE": "Enter your new password",
+
+      "FIELDS": {
+        "EMAIL": "Email",
+        "NEW_PASSWORD": "New password",
+        "CONFIRM_PASSWORD": "Confirm new password"
+      },
+
+
+      "PLACEHOLDERS": {
+        "EMAIL": "Enter your email",
+        "NEW_PASSWORD": "Enter a new password",
+        "CONFIRM_PASSWORD": "Re-enter the new password"
+      },
+
+      "ERRORS": {
+        "REQUIRED": "This field is required.",
+        "INVALID_PATTERN": "Invalid format: 8+ characters with uppercase, lowercase, number, and special character",
+        "PASSWORD_MISMATCH": "Passwords do not match."
+      },
+
+      "SUBMIT": "Submit"
+    },
+
+    "INSTRUMENT": {
+      "LABEL": "Instrument",
+      "PLACEHOLDER": "Select an instrument",
+      "AVANCES_7_JOURS": "7-day advances",
+      "REPRISE_LIQUIDITE_7_JOURS": "7-day liquidity absorption"
+    },
+    "OPERATION_PRINCIPALES": {
+      "TITLE": "Main Operations",
+      "TABLE_TITLE": "Main Operations",
+      "FILTERS": {
+        "DATE_FROM": "Deposit date (from)",
+        "DATE_TO": "Deposit date (to)",
+        "SEARCH_PLACEHOLDER": "Search"
+      },
+      "TABLE": {
+        "DATE_APPEL_OFFRES": "Tender date",
+        "DATE_VALEUR": "Value date",
+        "DATE_ECHEANCE": "Maturity date",
+        "INSTRUMENT": "Instrument",
+        "MONTANT_DEMANDE": "Requested amount",
+        "MONTANT_SERVI": "Allotted amount",
+        "TAUX": "Rate"
+      }
+    },
+    "REFERENCE_RATE": {
+      "TITLE": "Reference Rates",
+      "TABLE_TITLE": "Reference Rates",
+      "FILTERS": {
+        "DATE_FROM": "Deposit date (from)",
+        "DATE_TO": "Deposit date (to)",
+        "SEARCH_PLACEHOLDER": "Search"
+      },
+      "TABLE": {
+        "DEVISE": "Currency",
+        "COURS_MOYEN": "Average rate",
+        "DATE": "Date"
+      }
+    },
+    "MARCHE_MONETAIRE": {
+      "TITLE": "Interbank Money Market",
+      "TABLE_TITLE": "Interbank Money Market",
+      "FILTERS": {
+        "DATE_FROM": "Deposit date (from)",
+        "DATE_TO": "Deposit date (to)"
+      },
+      "TABLE": {
+        "DATE": "Date",
+        "TAUX_MOYEN_PONDERE": "Weighted average rate",
+        "VOLUME_JJ": "Overnight volume",
+        "ENCOURS": "Outstanding amount"
+      }
+    },
+    "INDICE_MONIA": {
+      "TITLE": "MONIA Index (Moroccan Overnight Index Average)",
+      "TABLE_TITLE": "MONIA Index",
+      "FILTERS": {
+        "DATE_FROM": "Deposit date (from)",
+        "DATE_TO": "Deposit date (to)"
+      },
+      "TABLE": {
+        "DATE_REFERENCE": "Reference date",
+        "DATE_PUBLICATION": "Publication date",
+        "INDICE_MONIA": "MONIA index",
+        "VOLUME_JJ": "Overnight volume"
+      }
+    },
+    "HISTORIQUE_DECISION": {
+      "TITLE": "Decision History",
+      "TABLE_TITLE": "Decision History",
+      "FILTERS": {
+        "DATE_FROM": "Deposit date (from)",
+        "DATE_TO": "Deposit date (to)"
+      },
+      "TABLE": {
+        "DATE": "Date",
+        "TAUX_DIRECTEUR": "Key interest rate",
+        "RATIO_RESERVE": "Required reserve ratio",
+        "REMUNERATION_RESERVE": "Reserve remuneration"
+      }
+    },
+    "COURS_BILLETS": {
+      "TITLE": "Banknote Exchange Rates",
+      "TABLE_TITLE": "Banknote Exchange Rates",
+      "FILTERS": {
+        "SEARCH_PLACEHOLDER": "Search"
+      },
+      "TABLE": {
+        "DEVISE": "Currency",
+        "ACHAT_CLIENTELE": "Customer buying rate",
+        "VENTE_CLIENTELE": "Customer selling rate"
+      }
+    },
+    "BAND_FLUCTUATION": {
+      "TITLE": "Exchange Rate Fluctuation Band",
+      "TABLE_TITLE": "Fluctuation Band",
+      "FILTERS": {
+        "DATE_FROM": "Deposit date (from)",
+        "DATE_TO": "Deposit date (to)",
+        "SEARCH_PLACEHOLDER": "Search"
+      },
+      "TABLE": {
+        "DEVISE": "Currency",
+        "HEURE": "Time",
+        "COURS_MIN": "Minimum rate",
+        "COURS_MAX": "Maximum rate",
+        "DATE": "Date"
+      }
+    },
+    "ASFIM_DATA": {
+      "TITLE": "Données ASFIM",
+      "DATA_TITLE": "Performances des fonds OPCVM",
+      "FILTERS": {
+        "DATE_DEPOT_FROM": "Date dépôt (du)",
+        "DATE_DEPOT_TO": "Date dépôt (au)",
+        "SEARCH_PLACEHOLDER": "Rechercher"
+      },
+      "TABLE": {
+        "FOND": "Fond",
+        "CATEGORIE": "Catégorie",
+        "SOCIETE_GESTION": "Société de gestion",
+        "VALEUR_LIQUIDATIVE": "Valeur liquidative",
+        "ACTIF_NET": "Actif net",
+        "PERFORMANCE_YTD": "Performance YTD",
+        "PERFORMANCE_1_AN": "Performance 1 an",
+        "DATE_DEPOT": "Date dépôt"
+      }
+    },
+    "DATA_SOURCES": {
+      "AMMC": {
+        "TITLE": "AMMC",
+        "SUBTITLE": "Moroccan Capital Market Authority",
+        "DESCRIPTION": "Regulates and supervises the capital market to protect investors and ensure market transparency.",
+        "PUBLICATION_DATE": "Publication date",
+        "TABLE_TITLE": "Press release title",
+        "DOCUMENT": "Document"
+      },
+      "ASFIM": {
+        "TITLE": "ASFIM",
+        "SUBTITLE": "Association of Moroccan Asset Management Companies and Investment Funds",
+        "DESCRIPTION": "Represents asset management companies and promotes asset management development in Morocco."
+      },
+      "BKAM": {
+        "TITLE": "BKAM",
+        "SUBTITLE": "Bank Al-Maghrib",
+        "DESCRIPTION": "Responsible for monetary policy and financial stability."
+      }
+    },
+    "ASFIM": {
+      "DATA_TITLE": "ASFIM Data",
+      "CATEGORY": "Category",
+      "FILE_NAME": "File Name",
+      "FILE_PUBLICATION_DATE": "File Publication Date",
+      "ASFIM_PUBLICATION_DATE": "ASFIM Publication Date"
+    },
+
+    "ASFIM_LANDING": {
+      "EXCEL_FILES": {
+        "TITLE": "Excel list",
+        "SUBTITLE": "Data Consultation",
+        "DESCRIPTION": "Consult ASFIM data integrated into the application. Access information resulting from imports and review their history."
+      },
+      "DATA_TABLE": {
+        "TITLE": "Data Table",
+        "SUBTITLE": "Comprehensive View",
+        "DESCRIPTION": "View data in an interactive table with advanced search, sorting, and filtering features for in-depth analysis."
+      }
+    },
+    "BKAM_LANDING": {
+      "TITLE": "Bank Al-Maghrib Data",
+      "CARDS": {
+        "BANDE_FLUCTUATION": {
+          "TITLE": "Exchange Rate Fluctuation Band",
+          "DESCRIPTION": "View fluctuations of the Moroccan dirham exchange rates within the BKAM fluctuation band."
+        },
+        "COURS_BILLET": {
+          "TITLE": "Banknote Exchange Rates",
+          "DESCRIPTION": "View banknote exchange rates based on Bank Al-Maghrib publications."
+        },
+        "HISTORIQUE_DECISION": {
+          "TITLE": "Decision History",
+          "DESCRIPTION": "Review Bank Al-Maghrib decisions: key interest rates, reserves, and remunerations."
+        },
+        "INDICE_MONIA": {
+          "TITLE": "MONIA Index (Moroccan Overnight Index Average)",
+          "DESCRIPTION": "Track the evolution of the MONIA index in the Moroccan money market."
+        },
+        "MARCHE_MONETAIRE": {
+          "TITLE": "Interbank Money Market",
+          "DESCRIPTION": "Analyze operations and indicators of the interbank money market."
+        },
+        "TAUX_REFERENCE": {
+          "TITLE": "Reference Rates",
+          "DESCRIPTION": "Access published reference rates used in the financial market."
+        },
+        "OPERATIONS_PRINCIPALES": {
+          "TITLE": "Main Operations",
+          "DESCRIPTION": "Review the main monetary policy operations conducted by Bank Al-Maghrib."
+        }
+      }
+    },
+    "PROFILES": {
+      "TITLE": "Profile",
+      "EDIT_TITLE": "Edit Profile",
+      "ADD_TITLE": "Create Profile",
+      "AVATAR": "Profile picture",
+      "DEFAULT_AVATAR": "Default profile picture",
+      "REMOVE_TOOLTIP": "Click to remove",
+      "NAME": "Last Name",
+      "NAME-PLACEHOLDER": "Enter last name",
+      "FIRSTNAME": "First Name",
+      "FIRSTNAME-PLACEHOLDER": "Enter first name",
+      "EMAIL": "Email address",
+      "PHONE": "Phone number",
+      "PHONE-PLACEHOLDER": "Enter phone number",
+      "TABS": {
+        "PROFILE": "Edit Profile",
+        "PASSWORD": "Edit Password"
+      },
+      "ALERTS": {
+        "TITLE": "Warning",
+        "IMAGE_TOO_LARGE": "The image exceeds ",
+        "INVALID_FORMAT": "The image format is not supported. Use JPEG or PNG."
+      },
+      "PASSWORD": {
+        "CURRENT": "Current Password",
+        "CURRENT_PLACEHOLDER": "Enter current password",
+        "NEW": "New Password",
+        "NEW_PLACEHOLDER": "Enter new password",
+        "CONFIRM": "Confirm Password",
+        "CONFIRM_PLACEHOLDER": "Re-enter new password",
+        "MISMATCH": "Passwords do not match",
+        "REQUIRED": "Required field",
+        "INVALID_PATTERN": "Password format is incorrect"
+      }
+    },
+    "USER-MENU": {
+      "PROFILE": "My Profile",
+      "LANGUAGE": "Language",
+      "LANG_EN": "English",
+      "LANG_FR": "French",
+      "DARK_MODE": "Dark Mode",
+      "LOGOUT": "Log out"
+    },
+    "MENU": {
+      "DASHBOARD": "Dashboard",
+      "DATA_BASE": "Database",
+      "TICKET": "Ticket",
+      "TICKET_MANAGEMENT": "Ticket management",
+      "PROJECTS": "Projects",
+      "PROJECTS_MANAGEMENT": "Project management",
+      "ADMIN": "Administration",
+      "USERS_MANAGEMENT": "User management",
+      "ROLES_MANAGEMENT": "Role management",
+      "ACCESS_HISTORY": "Access history",
+      "SETTINGS": "Settings",
+      "CATEGORY_MANAGEMENT": "Category management",
+      "SEVERITY_MANAGEMENT": "Severity management",
+      "PRIORITY_MANAGEMENT": "Priority management",
+      "EMAIL_NOTIFICATIONS": "Email notifications"
+    },
+    "ERROR": {
+      "PAGE_NOT_FOUND_CODE": "404 Error",
+      "PAGE_NOT_FOUND_TITLE": "We have lost this page",
+      "PAGE_NOT_FOUND_MESSAGE": "The requested page is missing. Check the URL or",
+      "RETURN_HOME": "Return Home",
+      "SEARCH_PLACEHOLDER": "Search metronic"
+    },
+    "TICKETS": {
+      "FILTER_TITLE": "Advanced search",
+      "TABLE_TITLE": "Tickets list",
+      "SEARCH": "Search a ticket",
+      "NEW_TICKET": "New Ticket",
+      "TAGS": {
+        "ADD_SELECT": " Select Tags:",
+        "ADD": "Add "
+      },
+      "COLUMNS": {
+        "TITLE": "Title",
+        "PRIORITY": "Priority",
+        "PROJECT": "Project",
+        "CATEGORY": "Category",
+        "STATUS": "Status",
+        "CREATION_DATE": "Creation date"
+      },
+      "FORM": {
+        "TITLE": "Ticket Management",
+        "INCIDENT_TITLE": "Incident title",
+        "INCIDENT_TITLE_PLACEHOLDER": "Short summary of the issue...",
+        "DESCRIPTION": "Detailed description",
+        "DESCRIPTION_PLACEHOLDER": "Describe the issue in detail: symptoms, impact, affected users...",
+        "DESCRIPTION_ANALYZING": "✍️ Analyzing your description...",
+        "PRIORITY_AUTO": "Automatically detected priority",
+        "PRIORITY_HINT": "Enter a description to detect the priority...",
+        "PRIORITY_LOADING": "Analyzing...",
+        "PROJECT": "Project",
+        "PROJECT_VERSION": "Project Version",
+        "PROJECT_PLACEHOLDER": "Select a project...",
+        "PROJECT_VERSION_PLACEHOLDER": "Select a project version...",
+        "PRIORITY": "Priority",
+        "PRIORITY_PLACEHOLDER": "Select a priority...",
+        "SEVERITY": "Severity",
+        "SEVERITY_PLACEHOLDER": "Select a severity...",
+        "CATEGORY": "Category",
+        "CATEGORY_PLACEHOLDER": "Select a category...",
+        "ASSIGNED": "Assigned to",
+        "ASSIGNED_PLACEHOLDER": "Automatic assignment based on priority",
+        "UPLOAD": "Drop files here or click to upload",
+        "UPLOAD_HINT": "Supports multiple files. Max size: 10 MB",
+        "REQUIRED": "This field is required.",
+        "BUTTONS": {
+          "CANCEL": "Cancel",
+          "SAVE": "Save",
+          "SAVING": "⏳ Creating..."
+        },
+        "SUGGESTIONS_TITLE": "AI Suggested Solutions",
+        "SUGGESTIONS_EMPTY": "No suggestions available."
+      },
+      "BUTTONS": {
+        "DETAILS": "Details",
+        "FOLLOW": "Follow",
+        "UNFOLLOW": "Unfollow",
+        "MODIFY": "Edit",
+        "ASSIGN": "Assign",
+        "CLOSE": "Close"
+      },
+      "AI_SUGGESTIONS": {
+        "SUGGESTIONS_EMPTY": "No suggestions available.",
+        "ANALYZING": "Analyzing...",
+        "BUTTONS": {
+          "EFFECTIVE": "Effective solution",
+          "INEFFECTIVE": "Ineffective solution"
+        }
+      }
+    },
+    "SUBPROJECTS": {
+      "TABLE_TITLE": "Sub-Project management"
+    },
+    "PROJECT_VERSIONS": {
+      "SEARCH": "Search a project version",
+      "TABLE_TITLE": "Project version management",
+      "COLUMNS": {
+        "VERSION": "Version",
+        "DESCRIPTION": "Description",
+        "TIMESTAMP": "Timestamp",
+        "RELEASED": "Released",
+        "OBSOLETE": "Obsolete"
+      },
+      "FORM": {
+        "VERSION": "Version",
+        "VERSION_PLACEHOLDER": "Enter version name or number",
+        "DESCRIPTION": "Description",
+        "DESCRIPTION_PLACEHOLDER": "Enter version description",
+        "ORDER_DATE": "Order date",
+        "RELEASED": "Released",
+        "OBSOLETE": "Obsolete"
+      },
+      "NEW_VERSION": "New project version"
+    },
+
+    "PROJECTS": {
+      "TABLE_TITLE": "Project management",
+      "SEARCH": "Search a project",
+      "NEW_PROJECT": "New project",
+      "COLUMNS": {
+        "TITLE": "Title",
+        "STATUS": "Status",
+        "VIEW_STATUS": "View Status",
+        "DESCRIPTION": "Description"
+      },
+      "VISIBILITY": {
+        "PUBLIC": "Public",
+        "PRIVATE": "Private"
+      },
+      "STATUS": {
+        "DEVELOPMENT":"Development",
+        "RELEASED":"Released",
+        "STABLE":"Stable",
+        "OBSOLETE":"Obsolete"
+      },
+      "FORM": {
+        "NAME": {
+          "NAME": "Name",
+          "PLACEHOLDER": "enter the project name"
+        },
+        "STATUS": "Status",
+        "VIEW_STATUS": "View Status",
+        "REQUIRED": "This field is required",
+        "SELECT_STATUS": "Select a status",
+        "DESCRIPTION": {
+          "NAME": "Description",
+          "PLACEHOLDER": "enter the project description"
+        }
+      },
+      "BUTTONS": {
+        "NEW_PROJECT": "New",
+        "VIEW": "View",
+        "PRINT": "Print",
+        "EDIT": "Edit",
+        "DUPLICATE": "Duplicate",
+        "DELETE": "Delete",
+        "CANCEL": "Cancel",
+        "SAVE": "Save",
+        "LOADING": "Loading..."
+      }
+    },
+    "USERS": {
+      "TABLE_TITLE": "User management",
+      "SEARCH": "Search a user",
+      "NEW_USER": "New user",
+      "COLUMNS": {
+        "NAME": "Full name",
+        "EMAIL": "Email",
+        "PHONE": "Phone",
+        "PROFILE": "Role",
+        "STATUS": "Status"
+      },
+      "FORM": {
+        "TITLE": "Add a New User",
+        "FIRST_NAME": "First name",
+        "FIRST_NAME_PLACEHOLDER": "Enter your first name",
+        "LAST_NAME": "Last Name",
+        "LAST_NAME_PLACEHOLDER": "Enter your last name",
+        "EMAIL": "Email",
+        "EMAIL_PLACEHOLDER": "Enter your email address",
+        "PHONE": "Phone",
+        "PHONE_PLACEHOLDER": "Enter your phone number",
+        "PROFILE": "Role",
+        "PROFILE_PLACEHOLDER": "Select a role",
+        "STATUS": "Status",
+        "STATUS_PLACEHOLDER": "Select a status",
+        "REQUIRED": "This field is required.",
+        "BUTTONS": {
+          "CANCEL": "Cancel",
+          "SAVE": "Save"
+        }
+      },
+      "BUTTONS": {
+        "VIEW": "View",
+        "PRINT": "Print",
+        "EDIT": "Edit",
+        "DUPLICATE": "Duplicate",
+        "DELETE": "Delete"
+      }
+    },
+    "HABILITATIONS": {
+      "TABLE_TITLE": "Permissions Management",
+      "SEARCH": "Search for a profile",
+      "NEW_PROFILE": "New Profile",
+      "COLUMNS": {
+        "NAME": "Name",
+        "MODULE": "Module",
+        "ROLE": "Role",
+        "DESCRIPTION": "Description"
+      },
+      "FORM": {
+        "TITLE": "Add a new profile",
+        "NAME": "Name",
+        "NAME_PLACEHOLDER": "Enter the profile name",
+        "MODULE": "Module",
+        "MODULE_PLACEHOLDER": "Select a module",
+        "ROLE": "Role",
+        "ROLE_PLACEHOLDER": "Select a role",
+        "DESCRIPTION": "Description",
+        "DESCRIPTION_PLACEHOLDER": "Enter the role description",
+        "NO_DATA": "No data found!!",
+        "REQUIRED": "This field is required."
+      },
+      "MODULES": {
+        "DASHBOARD": "Dashboard",
+        "TICKET_MANAGEMENT": "Ticket Management",
+        "PROJECT_MANAGEMENT": "Project Management",
+        "USER_MANAGEMENT": "User Management",
+        "HABILITATION_MANAGEMENT": "Permissions Management",
+        "ACCESS_HISTORY_MANAGEMENT": "Access History Management",
+        "EMAIL_NOTIFICATIONS_MANAGEMENT": "Email Notifications Management",
+        "CATEGORY_MANAGEMENT": "Category Management",
+        "DATABASE": "Database",
+        "ADMINISTRATION": "Administration",
+        "ASSISTANT_CONVERSATIONNEL": "Conversational Assistant"
+      },
+      "ROLES": {
+        "ROLE_AJOUTER_UTILISATEUR": "Add user",
+        "ROLE_SUPPRIMER_UTILISATEUR": "Delete user",
+        "ROLE_MODIFIER_UTILISATEUR": "Update user",
+        "ROLE_AFFICHER_UTILISATEUR": "View user",
+        "ROLE_AJOUTER_HABILITATION": "Add authorization",
+        "ROLE_MODIFIER_HABILITATION": "Update authorization",
+        "ROLE_AFFICHER_HABILITATION": "View authorization",
+        "ROLE_SUPPRIMER_HABILITATION": "Delete authorization",
+        "ROLE_ASSISTANT_CONVERSATIONNEL": "View conversational assistant",
+        "ROLE_AFFICHER_DATABASE": "View the database",
+        "ROLE_GESTION_UTILISATEUR": "User management",
+        "ROLE_DASHBOARD_VIEW": "View the dashboard",
+        "ROLE_TICKET_VIEW_HISTORY": "View ticket history",
+        "ROLE_TICKET_VIEW": "View tickets",
+        "ROLE_TICKET_CREATE": "Create a ticket",
+        "ROLE_TICKET_UPDATE": "Update a ticket",
+        "ROLE_TICKET_DELETE": "Delete a ticket",
+        "ROLE_TICKET_CLOSE": "Close a ticket",
+        "ROLE_TICKET_WATCH": "Watch a ticket",
+        "ROLE_TICKET_TAKE_CHARGE": "Take charge of a ticket",
+        "ROLE_TICKET_ASSIGN": "Assign a ticket",
+        "ROLE_TICKET_REOPEN": "Reopen a ticket",
+        "ROLE_TICKET_CONSIDER_RESOLVED": "Mark ticket as resolved",
+        "ROLE_TICKET_LOCK": "Lock a ticket",
+        "ROLE_TICKET_READONLY": "Read-only ticket access",
+        "ROLE_TICKET_UPDATE_STATUS": "Update ticket status",
+        "ROLE_TICKET_VIEW_PRIVATE": "View private ticket information",
+        "ROLE_TICKET_UPDATE_VISIBILITY": "Change ticket visibility",
+        "ROLE_TICKET_VIEW_PROBLEM_VERSIONS": "View problem versions",
+        "ROLE_TICKET_REMOVE_PROBLEM_VERSION": "Remove a problem version",
+        "ROLE_TICKET_PIN_PROBLEM": "Pin a problem",
+        "ROLE_TICKET_VIEW_WATCHERS": "View ticket watchers",
+        "ROLE_TICKET_ADD_WATCHER": "Add a watcher",
+        "ROLE_TICKET_REMOVE_WATCHER": "Remove a watcher",
+        "ROLE_TICKET_CHANGE_ASSIGN_STATE": "Change assignment state",
+        "ROLE_TICKET_POSITION_AUTO_ASSIGNED": "Auto-assigned position",
+        "ROLE_TICKET_VIEW_OTHERS": "View others' tickets",
+        "ROLE_TICKET_PRINT_REPORTS": "Print reports",
+        "ROLE_TICKET_EXPORT": "Export tickets",
+        "ROLE_PROJECT_VIEW": "View projects",
+        "ROLE_PROJECT_CREATE": "Create a project",
+        "ROLE_PROJECT_UPDATE": "Update a project",
+        "ROLE_PROJECT_DELETE": "Delete a project",
+        "ROLE_USER_VIEW": "View users",
+        "ROLE_USER_CREATE": "Create a user",
+        "ROLE_USER_UPDATE": "Update a user",
+        "ROLE_USER_DELETE": "Delete a user",
+        "ROLE_HABILITATION_VIEW": "View permissions",
+        "ROLE_HABILITATION_CREATE": "Create a permission",
+        "ROLE_HABILITATION_UPDATE": "Update a permission",
+        "ROLE_HABILITATION_DELETE": "Delete a permission",
+        "ROLE_ACCESS_HISTORY_VIEW": "View access history",
+        "ROLE_ACCESS_HISTORY_CREATE": "Create an access history entry",
+        "ROLE_ACCESS_HISTORY_UPDATE": "Update an access history entry",
+        "ROLE_ACCESS_HISTORY_DELETE": "Delete an access history entry",
+        "ROLE_EMAIL_NOTIFICATIONS_VIEW": "View email notifications",
+        "ROLE_EMAIL_NOTIFICATIONS_CREATE": "Create an email notification",
+        "ROLE_EMAIL_NOTIFICATIONS_UPDATE": "Update an email notification",
+        "ROLE_EMAIL_NOTIFICATIONS_DELETE": "Delete an email notification",
+        "ROLE_CATEGORY_VIEW": "View categories",
+        "ROLE_CATEGORY_CREATE": "Create a category",
+        "ROLE_CATEGORY_UPDATE": "Update a category",
+        "ROLE_CATEGORY_DELETE": "Delete a category"
+      }
+    },
+    "ACCESS_HISTORY": {
+      "TABLE_TITLE": "Access History",
+      "SEARCH": "Search...",
+      "COLUMNS": {
+        "USERNAME": "Username",
+        "BROWSER": "Browser",
+        "IP": "IP Address",
+        "DATE": "Date",
+        "STATUS": "Status"
+      },
+      "STATUS": {
+        "SUCCESS": "Success",
+        "FAILED": "Failed"
+      },
+      "BUTTONS": {
+        "VIEW": "View",
+        "PRINT": "Print"
+      }
+    },
+    "CATEGORIES": {
+      "TABLE_TITLE": "Category management",
+      "SEARCH": "Search a category",
+      "NEW_CATEGORY": "New category",
+      "COLUMNS": {
+        "NAME": "Name",
+        "ASSIGNED_TO": "Assigned to",
+        "ENABLED": "Enabled"
+      },
+      "FORM": {
+        "TITLE": "Add a New category",
+        "ENABLED": "Enabled",
+        "ASSIGN_TO": "Assign to",
+        "NAME": "Name",
+        "NAME_PLACEHOLDER": "Enter the category name",
+        "REQUIRED": "This field is required.",
+        "BUTTONS": {
+          "CANCEL": "Cancel",
+          "SAVE": "Save",
+          "LOADING": "Loading..."
+        }
+      },
+      "BUTTONS": {
+        "VIEW": "View",
+        "PRINT": "Print",
+        "EDIT": "Edit",
+        "DUPLICATE": "Duplicate",
+        "DELETE": "Delete"
+      }
+    },
+    "PRIORITIES": {
+      "TABLE_TITLE": "Priority management",
+      "SEARCH": "Search priority",
+      "NEW_PRIORITY": "New priority",
+      "COLUMNS": {
+        "NAME": "Name"
+      },
+      "FORM": {
+        "TITLE": "Add New priority",
+        "NAME": "Name",
+        "NAME_PLACEHOLDER": "Enter priority name",
+        "REQUIRED": "This field is required.",
+        "BUTTONS": {
+          "CANCEL": "Cancel",
+          "SAVE": "Save",
+          "LOADING": "Loading..."
+        }
+      },
+      "BUTTONS": {
+        "VIEW": "View",
+        "PRINT": "Print",
+        "EDIT": "Edit",
+        "DUPLICATE": "Duplicate",
+        "DELETE": "Delete"
+      }
+    },
+    "SEVERITIES": {
+      "TABLE_TITLE": "Severity management",
+      "SEARCH": "Search severity",
+      "NEW_SEVERITY": "New Severity",
+      "COLUMNS": {
+        "NAME": "Name"
+      },
+      "FORM": {
+        "TITLE": "Add a new severity",
+        "NAME": "Name",
+        "NAME_PLACEHOLDER": "Enter severity name",
+        "REQUIRED": "This field is required.",
+        "BUTTONS": {
+          "CANCEL": "Cancel",
+          "SAVE": "Save",
+          "LOADING": "Loading..."
+        }
+      },
+      "BUTTONS": {
+        "VIEW": "View",
+        "PRINT": "Print",
+        "EDIT": "Edit",
+        "DUPLICATE": "Duplicate",
+        "DELETE": "Delete"
+      }
+    },
+    "COMMENTS": {
+      "TABLE_TITLE": "Comments Management",
+      "SEARCH": "Search a comment",
+      "NEW_COMMENT": "New Comment",
+      "COLUMNS": {
+        "AUTHOR": "Author",
+        "COMMENT": "Comment",
+        "CREATED_ON": "Creation Date"
+      },
+      "FORM": {
+        "TITLE": "Add a new comment",
+        "PRIVATE": "Private",
+        "DESCRIPTION": "Detailed description",
+        "DESCRIPTION_PLACEHOLDER": "Write your comment about this ticket: observations, additional information, or follow-up...",
+        "REQUIRED": "This field is required.",
+        "ATTACHMENT": "Attachment",
+        "ATTACHMENT_HINT": "Click to select an image",
+        "ATTACHMENT_FORMAT": "JPEG or PNG. Max 5 MB.",
+        "BUTTONS": {
+          "CANCEL": "Cancel",
+          "SAVE": "Save",
+          "LOADING": "Loading..."
+        }
+      },
+      "BUTTONS": {
+        "EDIT": "Edit",
+        "DELETE": "Delete"
+      }
+    },
+    "TICKET_HISTORY": {
+      "TABLE_TITLE": "Incident History",
+      "COLUMNS": {
+        "UPDATED_ON": "Modification Date",
+        "UPDATED_BY": "Username",
+        "FIELD_NAME": "Field",
+        "CHANGE": "Change"
+      },
+      "DETAILS": {
+        "TITLE": "Incident History Details",
+        "VIEW_REVISIONS": "View Revisions"
+      }
+    },
+    "ALERTS": {
+      "SUCCESS_TITLE": "Success",
+      "SUCCESS_MESSAGE": "Operation completed successfully",
+      "ERROR_TITLE": "Error",
+      "WARNING_TITLE": "Warning",
+      "DELETE_TITLE": "Are you sure?",
+      "DELETE_MESSAGE": "This action is irreversible.",
+      "DELETE_CONFIRM": "Yes, delete",
+      "CANCEL": "Cancel"
+    },
+    "EMAIL_NOTIFICATIONS": {
+      "TABLE_TITLE": "Email notifications",
+      "FORM": {
+        "BUTTONS": {
+          "UPDATE_CONFIGURATION": "Update configuration"
+        }
+      },
+      "COLUMN": {
+          "MESSAGE": "Message",
+          "REPORTER": "User who reported the issue",
+          "HANDLER": "User who is handling the issue",
+          "MONITORS": "Users monitoring this issue",
+          "BUG_NOTES": "Users who added Issue Notes",
+          "CATEGORY_OWNER": "Category Owner",
+          "ANY_USER_ACCESS": "Any user with access level",
+          "ACCESS_LEVEL": {
+            "VIEWER": "Viewer",
+            "REPORTER": "Reporter",
+            "UPDATER": "Updater",
+            "DEVELOPER": "Developer",
+            "MANAGER": "Manager",
+            "ADMINISTRATOR": "Administrator"
+          }
+      },
+          "MESSAGES": {
+            "EMAIL_ON_UPDATE": "E-mail on Updated",
+            "EMAIL_ON_CHANGE_OF_HANDLER":"E-mail on Change of Handler",
+            "EMAIL_ON_REOPENED": "E-mail on Reopened",
+            "EMAIL_ON_DELETED":"E-mail on Deleted",
+            "EMAIL_ON_NOTE_ADDED":"E-mail on Note Added",
+            "EMAIL_ON_RELATIONSHIP_CHANGED": "E-mail on Relationship changed",
+            "EMAIL_WHEN_USER_STARTS_MONITORING": "E-mail when user starts monitoring",
+            "STATUS_CHANGES_TO_NEW": "Status changes to 'new'",
+            "STATUS_CHANGES_TO_FEEDBACK": "Status changes to 'feedback'",
+            "STATUS_CHANGES_TO_ACKNOWLEDGED": "Status changes to 'acknowledged'",
+            "STATUS_CHANGES_TO_CONFIRMED": "Status changes to 'confirmed'",
+            "STATUS_CHANGES_TO_ASSIGNED": "Status changes to 'assigned'",
+            "STATUS_CHANGES_TO_RESOLVED": "Status changes to 'resolved'",
+            "STATUS_CHANGES_TO_CLOSED": "Status changes to 'closed'"
+          }
+    },
+    "MONITOR": {
+      "TABLE_TITLE": "Monitors list",
+      "SEARCH": "Search a user"
+    },
+    "GLOBAL": {
+      "YES": "Yes",
+      "NO": "No",
+      "READ_MORE": "Read More",
+      "OF": "of"
+    },
+    "BUTTONS": {
+      "RESET": "Reset",
+      "SEARCH": "Search",
+      "NEW": "New",
+      "BACK": "Back",
+      "NEWE": "New",
+      "FOLLOW": "Follow",
+      "EDIT": "Edit",
+      "VIEW": "View",
+      "PRINT": "Print",
+      "CLOSE": "Close",
+      "CANCEL": "Cancel",
+      "DETAILS": "Details",
+      "MODIFY": "Modify",
+      "ASSIGN": "Assign",
+      "SAVE": "Save",
+      "DELETE": "Delete",
+      "DUPLICATE": "Duplicate",
+      "LOADING": "Loading...",
+      "UNFOLLOW": "Unfollow",
+      "EFFECTIVE": "Effective solution",
+      "INEFFECTIVE": "Ineffective solution",
+      "UPDATE_CONFIGURATION": "Edit configuration",
+      "EXPORT": "Export",
+      "CLONE": "Clone",
+      "SHOW_ADVANCED_SEARCH": "Advanced search",
+      "HIDE_ADVANCED_SEARCH": "Hide advanced search"
+    },
+    "TICKET_RELATIONS": {
+      "TITLE": "Ticket Relations",
+      "TYPE_LABEL": "Relation Type",
+      "TYPE_PLACEHOLDER": "Select a relation type...",
+      "RELATED_LABEL": "Related Ticket",
+      "RELATED_PLACEHOLDER": "Search for a ticket...",
+      "ADD_BUTTON": "Add",
+      "RELATIONS": {
+        "PARENT": "parent of",
+        "CHILD": "child of",
+        "DUPLICATE": "duplicate of",
+        "HAS_DUPLICATE": "has duplicate",
+        "RELATED": "related to"
+      },
+      "TABLE": {
+        "TYPE": "Type",
+        "RELATED_ID": "Identifier",
+        "NO_RELATIONS": "No relations found"
+      },
+      "DELETE_TOOLTIP": "Delete relation"
+    }
+  }
+}

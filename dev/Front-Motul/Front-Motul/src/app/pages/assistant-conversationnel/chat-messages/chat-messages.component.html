@@ -1,0 +1,217 @@
+<div class="m kt-card-content p-5 lg:p-6 flex flex-col">
+
+    <div class="scroll-messages space-y-4 flex-grow overflow-y-auto py-4"
+         #chatContainer (scroll)="onScroll($event)">
+
+        <div *ngIf="!selectedProject && messages.length === 0"
+             class="absolute inset-0 flex flex-col items-center justify-center text-center gap-4 px-6">
+            <div class="w-16 h-16 rounded-2xl bg-warning/10 flex items-center justify-center">
+                <i class="ki-filled ki-folder text-warning text-3xl"></i>
+            </div>
+            <div>
+                <p class="text-lg font-semibold text-mono">Sélectionnez un projet</p>
+                <p class="text-sm text-secondary-foreground mt-1">
+                    Choisissez un projet dans le menu déroulant ci-dessus avant de poser une question.
+                    L'IA recherchera uniquement dans les documents de ce projet.
+                </p>
+            </div>
+        </div>
+
+        <div *ngIf="selectedProject && messages.length === 0"
+             class="absolute inset-0 flex flex-col items-center justify-center text-center gap-3 px-6">
+            <div class="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <i class="ki-filled ki-message-text-2 text-primary text-3xl"></i>
+            </div>
+            <div>
+                <p class="text-lg font-semibold text-mono">{{ 'MODULES.CHAT.EMPTY_STATE' | translate }}</p>
+                <p class="text-sm text-secondary-foreground mt-1">
+                    Posez une question sur les documents du projet
+                    <strong class="text-primary">{{ selectedProject }}</strong>.
+                </p>
+            </div>
+        </div>
+
+        <ng-container *ngFor="let msg of messages; let i = index; trackBy: trackByIndex">
+
+            <div class="flex justify-end gap-3" *ngIf="msg.sendBy === 'USER'">
+                <div class="msg flex flex-col gap-1 max-w-[75%]">
+                    <div class="flex items-center gap-2 justify-end">
+                        <div class="kt-card shadow-none bg-primary p-3 rounded-be-none rounded-bs-lg">
+                            <p class="text-2sm font-medium text-primary-foreground">{{ msg.content }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-3" *ngIf="msg.sendBy === 'AGENT' && !msg.table && !msg.graph">
+                <div class="msg flex flex-col gap-1 w-full max-w-[88%]">
+                    <div class="flex items-start gap-2">
+
+                        <div class="kt-card shadow-none bg-accent/60 p-4 rounded-bs-none rounded-be-lg flex-1">
+
+                            <div class="bot-response-body" [innerHTML]="msg.content"></div>
+
+                            <div *ngIf="msg.sources && msg.sources.length > 0"
+                                 class="mt-4 pt-3 border-t border-border">
+
+                                <p class="text-xs font-medium text-secondary-foreground uppercase tracking-wide mb-2">
+                                    Sources consultées
+                                </p>
+
+                                <div *ngFor="let src of msg.sources"
+                                     class="flex items-center justify-between gap-2 px-3 py-2 bg-background rounded-lg border border-border mb-1.5 last:mb-0">
+
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <i class="ki-filled text-sm flex-shrink-0"
+                                           [ngClass]="getFileIcon(src.fileName)"></i>
+                                        <div class="min-w-0">
+                                            <p class="text-xs font-medium text-mono truncate">{{ src.fileName }}</p>
+                                            <p *ngIf="src.pages" class="text-xs text-secondary-foreground">
+                                                Page{{ src.pages.includes('–') ? 's' : '' }} {{ src.pages }}
+                                                · {{ src.extractCount }} extrait{{ src.extractCount > 1 ? 's' : '' }}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-center gap-2 flex-shrink-0">
+                                        <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                                            {{ src.extractCount }} extrait{{ src.extractCount > 1 ? 's' : '' }}
+                                        </span>
+                                        <button class="btn btn-xs btn-light flex items-center gap-1 border border-border hover:border-primary hover:text-primary transition-colors"
+                                                (click)="downloadSourceFile(src)"
+                                                [disabled]="downloadingSource === src.fileName"
+                                                title="Télécharger {{ src.fileName }}">
+                                            <i class="ki-filled text-xs"
+                                               [ngClass]="downloadingSource === src.fileName ? 'ki-loading animate-spin' : 'ki-file-down'"></i>
+                                            <span class="text-xs hidden sm:inline">Télécharger</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost text-primary hover:text-primary mt-1"
+                                (click)="copyMessage(msg.content)"
+                                [title]="'MODULES.CHAT.COPY_TEXT' | translate">
+                            <i class="ki-filled ki-copy text-lg"></i>
+                        </button>
+
+                    </div>
+                </div>
+            </div>
+
+            <div *ngIf="msg.table">
+                <div class="flex gap-3">
+                    <div class="msg flex flex-col gap-1">
+                        <div class="flex items-start gap-2">
+                            <div class="kt-card shadow-none bg-accent/60 p-3 rounded-bs-none rounded-be-lg w-full">
+                                <p class="text-2sm" [innerHTML]="msg.content"></p>
+                                <div class="scrollable-table mt-2 overflow-x-auto">
+                                    <table class="w-full border border-gray-300 rounded-lg shadow-sm overflow-hidden">
+                                        <thead class="bg-gray-50">
+                                        <tr>
+                                            <th *ngFor="let h of msg.tableHeaders"
+                                                class="px-4 py-2 text-left text-sm font-semibold text-primary border-b border-gray-300 border-r last:border-r-0">
+                                                {{ h }}
+                                            </th>
+                                        </tr>
+                                        </thead>
+                                        <tbody class="text-sm text-gray-700">
+                                        <tr *ngFor="let row of msg.tableRows; let i = index"
+                                            [class]="i % 2 === 0 ? 'bg-white' : 'bg-gray-50'">
+                                            <td *ngFor="let cell of row"
+                                                class="px-4 py-2 border-b border-gray-200 border-r last:border-r-0">
+                                                {{ cell }}
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <button class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost text-primary hover:text-primary"
+                                    (click)="copyTableMarkdown(msg.table)"
+                                    [title]="'MODULES.CHAT.COPY_TABLE' | translate">
+                                <i class="ki-filled ki-copy text-lg"></i>
+                            </button>
+                            <button class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost text-success hover:text-success"
+                                    (click)="downloadExcelFromMarkdown(msg.table)"
+                                    [title]="'MODULES.CHAT.DOWNLOAD_EXCEL' | translate">
+                                <i class="ki-filled ki-file-down text-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div *ngIf="msg.graph">
+                <div class="flex gap-3">
+                    <div class="msg flex flex-col gap-1">
+                        <div class="flex items-start gap-2">
+                            <div class="kt-card shadow-none bg-accent/60 p-3 rounded-bs-none rounded-be-lg w-full">
+                                <p class="text-2sm" [innerHTML]="msg.content"></p>
+                                <canvas [id]="'chart-' + i" class="chat-graph mt-2"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </ng-container>
+
+        <div class="flex gap-3" *ngIf="isLoading">
+            <div class="flex flex-col gap-1 max-w-[75%]">
+                <div class="flex items-center gap-2">
+                    <div class="kt-card shadow-none bg-accent/60 p-3 rounded-bs-none rounded-be-lg">
+                        <i class="bi bi-three-dots animate-pulse"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="pt-4 border-t border-border bg-white dark:bg-background absolute bottom-4 left-0 right-0 mx-2">
+
+        <div *ngIf="selectedProject"
+             class="flex items-center gap-1.5 px-3 mb-2 text-xs text-secondary-foreground">
+            <i class="ki-filled ki-folder text-primary text-xs"></i>
+            <span>Recherche dans <strong class="text-primary">{{ selectedProject }}</strong></span>
+        </div>
+
+        <form class="flex items-end space-x-2 w-full"
+              [formGroup]="form"
+              (ngSubmit)="!isLoading && sendMessage()">
+            <div class="relative flex-1 flex items-end">
+
+                <button type="button"
+                        class="absolute left-3 bottom-2 text-gray-400 hover:text-primary transition-colors">
+                    <i class="ki-filled ki-fasten text-xl"></i>
+                </button>
+
+                <textarea
+                        rows="1"
+                        autocomplete="off"
+                        class="kt-input w-full pl-12 overflow-y-auto resize-none border border-border rounded-xl py-2 focus:outline-none focus:ring-2"
+                        style="min-height: 42px"
+                        [placeholder]="selectedProject
+                        ? ('MODULES.CHAT.INPUT_PLACEHOLDER' | translate)
+                        : 'Sélectionnez d\'abord un projet...'"
+                        formControlName="content"
+                        name="userInput"
+                        (input)="autoResize($event)"
+                        (keyup.enter)="!isLoading && sendMessage()"
+                        [disabled]="isLoading || !selectedProject"
+                ></textarea>
+
+                <button [disabled]="isLoading || !selectedProject"
+                        type="submit"
+                        class="absolute right-4 bottom-2 text-primary hover:text-primary-dark transition-colors
+                               disabled:opacity-30 disabled:cursor-not-allowed">
+                    <i class="ki-filled ki-paper-plane text-xl"></i>
+                </button>
+
+            </div>
+        </form>
+    </div>
+
+</div>

@@ -1,0 +1,71 @@
+@import 'quill/dist/quill.snow.css';
+
+
+/* === Headings (headers) === */
+.comment-content h1 { font-size: 2em; margin: 0.67em 0; }
+.comment-content h2 { font-size: 1.5em; margin: 0.75em 0; }
+.comment-content h3 { font-size: 1.17em; margin: 0.83em 0; }
+.comment-content h4 { font-size: 1em; margin: 1.12em 0; }
+.comment-content h5 { font-size: 0.83em; margin: 1.5em 0; }
+.comment-content h6 { font-size: 0.75em; margin: 1.67em 0; }
+
+/* === Font families === */
+.comment-content .ql-font-serif { font-family: serif; }
+.ql-font-monospace { font-family: monospace; }
+.ql-font-sans { font-family: sans-serif; }
+
+/* === Font sizes === */
+.comment-content .ql-size-small { font-size: 0.75em; }
+.comment-content .ql-size-large { font-size: 1.5em; }
+.comment-content .ql-size-huge { font-size: 2.5em; }
+
+/* === Text alignment === */
+.comment-content .ql-align-center { text-align: center; }
+.comment-content .ql-align-right { text-align: right; }
+.comment-content .ql-align-justify { text-align: justify; }
+
+/* === Colors (text + background) === */
+.comment-content .ql-color-red { color: red; }
+.comment-content .ql-color-blue { color: blue; }
+.comment-content .ql-color-green { color: green; }
+.comment-content .ql-color-black { color: black; }
+.comment-content .ql-background-yellow { background-color: yellow; }
+.comment-content .ql-background-gray { background-color: #eee; }
+/* (You can expand this list or let inline styles handle it) */
+
+/* === Inline styles (strong, em, underline, strike) === */
+.comment-content strong { font-weight: bold; }
+.comment-content em { font-style: italic; }
+.comment-content u { text-decoration: underline; }
+.comment-content s { text-decoration: line-through; }
+
+/* === Lists === */
+.comment-content ul { list-style-type: disc; margin: 0 0 1em 2em; padding: 0; }
+.comment-content ol { list-style-type: decimal; margin: 0 0 1em 2em; padding: 0; }
+.comment-content li { margin: 0.25em 0; }
+
+/* === Code block === */
+.comment-content pre  {
+    background-color: #23241f;
+    color: #f8f8f2;
+    overflow: auto;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-family: monospace;
+    font-size: 0.9em;
+}
+.comment-content code {
+    background-color: #000000;
+    border-radius: 3px;
+    padding: 2px 4px;
+    font-family: monospace;
+}
+
+/* === Clean formatting === */
+.comment-content .ql-clean { all: unset; }
+
+/* === Links === */
+.comment-content a {
+    color: #06c;
+    text-decoration: underline;
+}

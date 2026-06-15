@@ -1,0 +1,92 @@
+server:
+  port: 8080
+  servlet:
+    contextPath: /api
+  tomcat:
+    max-swallow-size: 200MB
+    max-http-form-post-size: 200MB
+
+spring:
+  application:
+    name: motul-back
+  jackson:
+    read-constraints:
+      max-string-length: 200000000
+    serialization:
+      write-dates-as-timestamps: false
+  servlet:
+    multipart:
+      # 🎯 Augmenté à 200MB pour absorber le gonflement de taille (+33%) provoqué par l'encodage Base64
+      max-file-size: 200MB
+      max-request-size: 200MB
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/Motuldb
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      auto-commit: false
+      connection-timeout: 50000
+      idle-timeout: 30000
+      max-lifetime: 1800000
+      minimum-idle: 2
+      maximum-pool-size: 5
+      pool-name: portailHikariCP
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    generate-ddl: true
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        default_schema: public
+    database: postgresql
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+
+auth:
+  failed:
+    attempts:
+      login: 3
+      forgotPwd: 5
+  security:
+    jwt:
+      secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+      jwtExpiration: 86400000
+      refreshExpiration: 604800000
+
+external:
+  ai:
+    # 💎 URLs Stateless RAM & Callbacks validées et synchronisées de bout en bout
+    url: http://localhost:8000/api/chat/message
+    projects: http://localhost:8000/api/projects
+    documents: http://localhost:8000/api/documents/backoffice/receive-and-index
+    dex: http://localhost:8000/api/ai
+
+application:
+  web:
+    url: http://localhost:4200/#/auth/new-password
+
+mail:
+  templates:
+    mailTemplatePath: "classpath:templates/"
+    RegisterMailContent: |
+      <p>Vous avez été invité(e) à rejoindre l'application Motul. 
+      Afin d'activer votre compte, veuillez cliquer sur le lien ci-dessous...</p>
+    ForgetPasswordMailContent: |
+      <p>Bienvenue sur la plateforme Motul...</p>
+
+file:
+  upload:
+    max-size-profile-image: 1000000
+    # Aligné à 150 Mo en octets pour tes règles internes de validation Java
+    max-size: 157286400
+    allowed-extensions: "application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+
+logging:
+  level:
+    org:
+      springframework:
+        security: DEBUG

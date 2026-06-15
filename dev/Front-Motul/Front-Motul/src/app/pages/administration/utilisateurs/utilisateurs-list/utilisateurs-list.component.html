@@ -1,0 +1,170 @@
+<div class="grid gap-5 lg:gap-7.5">
+    <div class="kt-card kt-card-grid min-w-full">
+        <div class="kt-card-header flex-wrap gap-2">
+            <h3 class="kt-card-title text-sm">
+                {{ 'MODULES.USERS.TABLE_TITLE' | translate }}
+            </h3>
+            <div class="flex flex-wrap gap-2 lg:gap-5">
+                <div class="flex">
+                    <label class="kt-input">
+                        <i class="ki-filled ki-magnifier">
+                        </i>
+                        <input
+                                [placeholder]="'MODULES.USERS.SEARCH' | translate"
+                                type="text"
+                                [(ngModel)]="term"
+                                (input)="onFind()" />
+                    </label>
+                </div>
+                <div class="flex flex-wrap gap-2.5">
+                    <button class="kt-btn  kt-btn-primary" (click)="onAdd()">
+                        <i class="ki-filled ki-plus">
+                        </i>
+                        {{ 'MODULES.BUTTONS.NEW' | translate }}
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="kt-card-content">
+            <div>
+                <div class="kt-scrollable-x-auto">
+                    <table class="kt-table table-auto kt-table-border">
+                        <thead>
+                        <tr>
+                            <th class="min-w-[180px]">
+                                <span class="kt-table-col">
+                                  <span class="kt-table-col-label">
+                                    {{ 'MODULES.USERS.COLUMNS.NAME' | translate }}
+                                  </span>
+                                  <span class="kt-table-col-sort"
+                                        (click)="onSort('name')"
+                                        [ngClass]="{
+                                          'asc': page.column === 'name' && page.direction === 'ASC',
+                                          'desc': page.column === 'name' && page.direction === 'DESC'
+                                        }">
+                                    <i *ngIf="page.column === 'name' && page.direction === 'ASC'" class="ki-filled  ki-up text-gray-800 text-xs "></i>
+                                    <i *ngIf="page.column === 'name' && page.direction === 'DESC'" class="ki-filled ki-down text-gray-800 text-xs"></i>
+                                  </span>
+                                </span>
+                            </th>
+                            <th class="min-w-[180px]">
+                                <span class="kt-table-col">
+                                  <span class="kt-table-col-label">
+                                    {{ 'MODULES.USERS.COLUMNS.EMAIL' | translate }}
+                                  </span>
+                                  <span class="kt-table-col-sort"
+                                        (click)="onSort('email')"
+                                        [ngClass]="{
+                                          'asc': page.column === 'email' && page.direction === 'ASC',
+                                          'desc': page.column === 'email' && page.direction === 'DESC'
+                                        }">
+                                    <i *ngIf="page.column === 'email' && page.direction === 'ASC'" class="ki-filled  ki-up text-gray-800 text-xs "></i>
+                                    <i *ngIf="page.column === 'email' && page.direction === 'DESC'" class="ki-filled ki-down text-gray-800 text-xs"></i>
+                                  </span>
+                                </span>
+                            </th>
+                            <th class="min-w-[180px]">
+                                <span class="kt-table-col">
+                                  <span class="kt-table-col-label">
+                                    {{ 'MODULES.USERS.COLUMNS.PHONE' | translate }}
+                                  </span>
+                                  <span class="kt-table-col-sort"
+                                        (click)="onSort('phone')"
+                                        [ngClass]="{
+                                          'asc': page.column === 'phone' && page.direction === 'ASC',
+                                          'desc': page.column === 'phone' && page.direction === 'DESC'
+                                        }">
+                                    <i *ngIf="page.column === 'phone' && page.direction === 'ASC'" class="ki-filled  ki-up text-gray-800 text-xs "></i>
+                                    <i *ngIf="page.column === 'phone' && page.direction === 'DESC'" class="ki-filled ki-down text-gray-800 text-xs"></i>
+                                  </span>
+                                </span>
+                            </th>
+                            <th class="min-w-[180px]">
+                                <span class="kt-table-col">
+                                  <span class="kt-table-col-label">
+                                    {{ 'MODULES.USERS.COLUMNS.PROFILE' | translate }}
+                                  </span>
+                                  <span class="kt-table-col-sort"
+                                        (click)="onSort('profile')"
+                                        [ngClass]="{
+                                          'asc': page.column === 'profile' && page.direction === 'ASC',
+                                          'desc': page.column === 'profile' && page.direction === 'DESC'
+                                        }">
+                                    <i *ngIf="page.column === 'profile' && page.direction === 'ASC'" class="ki-filled  ki-up text-gray-800 text-xs "></i>
+                                    <i *ngIf="page.column === 'profile' && page.direction === 'DESC'" class="ki-filled ki-down text-gray-800 text-xs"></i>
+                                  </span>
+                                </span>
+                            </th>
+                            <th class="min-w-[180px]">
+                                <span class="kt-table-col">
+                                  <span class="kt-table-col-label">
+                                    {{ 'MODULES.USERS.COLUMNS.STATUS' | translate }}
+                                  </span>
+                                  <span class="kt-table-col-sort"
+                                        (click)="onSort('status')"
+                                        [ngClass]="{
+                                          'asc': page.column === 'status' && page.direction === 'ASC',
+                                          'desc': page.column === 'status' && page.direction === 'DESC'
+                                        }">
+                                    <i *ngIf="page.column === 'status' && page.direction === 'ASC'" class="ki-filled  ki-up text-gray-800 text-xs "></i>
+                                    <i *ngIf="page.column === 'status' && page.direction === 'DESC'" class="ki-filled ki-down text-gray-800 text-xs"></i>
+                                  </span>
+                                </span>
+                            </th>
+                            <th class="w-[60px]"></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr *ngFor="let element of data?.content">
+                            <td class="text-foreground font-normal">{{ element?.firstName }}-{{ element?.lastName }}</td>
+                            <td class="leading-none text-foreground font-normal">{{ element?.email}}</td>
+                            <td class="leading-none text-foreground font-normal">{{ element?.phone}}</td>
+                            <td class="leading-none text-foreground font-normal">{{ element?.profile?.name}}</td>
+                            <td class="leading-none text-foreground font-normal">
+                                {{ element?.enabled ? 'Actif' : 'Inactif' }}
+                            </td>
+                            <td class="text-center">
+                                <div class="kt-menu flex-inline" data-kt-menu="true">
+                                    <div class="kt-menu-item" data-kt-menu-item-offset="0, 10px" data-kt-menu-item-placement="bottom-end" data-kt-menu-item-placement-rtl="bottom-start" data-kt-menu-item-toggle="dropdown" data-kt-menu-item-trigger="click">
+                                        <button class="kt-menu-toggle kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost">
+                                            <i class="ki-filled ki-dots-vertical text-lg">
+                                            </i>
+                                        </button>
+                                        <div class="kt-menu-dropdown kt-menu-default w-full max-w-[175px]" data-kt-menu-dismiss="true">
+                                            <div class="kt-menu-item">
+                                                <a class="kt-menu-link" (click)="onEdit(element.id)">
+                                                    <span class="kt-menu-icon">
+                                                      <i class="ki-filled ki-pencil"></i>
+                                                    </span>
+                                                    <span class="kt-menu-title">{{ 'MODULES.BUTTONS.EDIT' | translate }}</span>
+                                                </a>
+                                            </div>
+                                            <div class="kt-menu-separator">
+                                            </div>
+                                            <div class="kt-menu-item" >
+                                                <a class="kt-menu-link" (click)="onDelete(element.id)" ><span class="kt-menu-icon"><i class="ki-filled ki-trash"></i></span>
+                                                    <span class="kt-menu-title">{{ 'MODULES.BUTTONS.DELETE' | translate }}</span>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div *ngIf="data?.totalElements > 0" class="kt-card-footer justify-end flex gap-5 text-secondary-foreground text-sm font-medium">
+                    <ngb-pagination
+                            [collectionSize]="data?.totalElements"
+                            [pageSize]="data.size"
+                            [maxSize]="5"
+                            [rotate]="true"
+                            [boundaryLinks]="true"
+                            [(page)]="currentPage">
+                    </ngb-pagination>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
