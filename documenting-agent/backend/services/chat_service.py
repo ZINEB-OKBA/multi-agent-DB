@@ -51,6 +51,7 @@ RÈGLES ABSOLUES :
 1. Ne fabrique JAMAIS d'information absente du contexte.
 2. Cite les valeurs exactes (chiffres, dates, noms, règles).
 3. Si la réponse est incomplète, dis-le clairement.
+4. Si les documents ne contiennent pas la réponse à la question ou si tu as un doute, dis STRICTEMENT "Je ne trouve pas cette information dans les documents fournis" et n'invente rien.
 
 ══════════════════════════════════════════════
 MISE EN FORME OBLIGATOIRE :
@@ -183,7 +184,7 @@ class ChatService:
             await send_fn(json.dumps({"type": "token", "token": msg}))
             return msg, []
 
-        docs = vectorstore.similarity_search(question, k=5)
+        docs = vectorstore.similarity_search(question, k=8)
         if not docs:
             msg = "❌ Aucun document pertinent trouvé."
             await send_fn(json.dumps({"type": "token", "token": msg}))
@@ -198,7 +199,7 @@ class ChatService:
         )
 
         handler = WebSocketStreamHandler(send_fn)
-        llm     = get_llm(temperature=0.1, max_tokens=2048, streaming=True, callbacks=[handler])
+        llm     = get_llm(temperature=0.0, max_tokens=2048, streaming=True, callbacks=[handler])
         chain   = RAG_PROMPT | llm | StrOutputParser()
         result  = await chain.ainvoke({"context": context, "question": question})
 

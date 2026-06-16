@@ -12,8 +12,8 @@ from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 logger       = logging.getLogger(__name__)
-CHUNK_SIZE   = 2000
-CHUNK_OVERLAP = 300
+CHUNK_SIZE   = 1000
+CHUNK_OVERLAP = 150
 
 
 def _load_pdf(file_path: str) -> List[Document]:
