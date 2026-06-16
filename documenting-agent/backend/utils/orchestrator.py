@@ -31,7 +31,7 @@ from utils.llm_factory import get_llm
 from utils.loader_excel import load_dataframe, run_excel_agent
 
 logger = logging.getLogger(__name__)
-IntentType = Literal["pdf", "excel", "unknown"]
+IntentType = Literal["pdf", "excel", "general", "unknown"]
 
 # ── REGISTRE GLOBAL EN RAM (CACHE DES PROJETS ACTIFS) ─────────────────────────
 RAM_PROJECTS_CACHE: Dict[int, Dict] = {}
@@ -60,6 +60,13 @@ Question : {question}"""
 def classify_intent(question: str) -> IntentType:
     """Utilise Llama-3.3-70B pour router la demande vers l'agent PDF ou Excel."""
     logger.info(f"🧭 Classification de l'intention : '{question[:80]}'")
+    
+    # Détection des requêtes générales sur le contenu du projet
+    lower_q = question.lower()
+    if any(kw in lower_q for kw in ["contien quoi", "contient quoi", "quels documents", "quelles données", "liste des fichiers", "quels fichiers", "qu'est-ce qu'il y a", "base de données", "base de donnée", "fichiers existants"]):
+        logger.info("   → Intention identifiée comme requête générale de métadonnées.")
+        return "general"
+
     llm = get_llm(temperature=0.0, max_tokens=10)
     chain = INTENT_PROMPT | llm | StrOutputParser()
     result = chain.invoke({"question": question}).strip().lower()
@@ -311,6 +318,42 @@ def orchestrate(
             
             # Met à disposition les clés des DataFrames chargés en mémoire comme références de sources
             result["docs"] = list(dataframes.keys()) 
+
+        elif intent == "general":
+            pdf_names = []
+            excel_names = []
+            try:
+                conn = psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASSWORD)
+                cursor = conn.cursor(cursor_factory=RealDictCursor)
+                cursor.execute(
+                    "SELECT file_name FROM documents WHERE project_id = %s AND is_indexed = TRUE;",
+                    (project_id,)
+                )
+                db_docs = cursor.fetchall()
+                cursor.close()
+                conn.close()
+                for doc in db_docs:
+                    fname = doc["file_name"]
+                    ext = os.path.splitext(fname)[1].lower()
+                    if ext in (".pdf", ".docx", ".doc"):
+                        pdf_names.append(fname)
+                    elif ext in (".csv", ".xlsx", ".xls", ".xlsm"):
+                        excel_names.append(fname)
+            except Exception as db_err:
+                logger.error(f"❌ Erreur lecture BDD pour l'intention générale : {db_err}")
+
+            # Construire la réponse textuelle
+            answer_parts = ["Le projet contient les ressources suivantes dans la base de données :"]
+            if pdf_names:
+                answer_parts.append(f"- **Documents PDF & Word** : " + ", ".join(f"`{n}`" for n in pdf_names))
+            if excel_names:
+                answer_parts.append(f"- **Données Excel & CSV** : " + ", ".join(f"`{n}`" for n in excel_names))
+            if not pdf_names and not excel_names:
+                answer_parts.append("- Aucun document indexé actuellement.")
+
+            result["agent_used"] = "Orchestrateur (Métadonnées)"
+            result["answer"] = "\n".join(answer_parts)
+            result["docs"] = []
 
         else:
             result["error"] = "❌ Intention non reconnue."
