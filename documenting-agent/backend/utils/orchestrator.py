@@ -63,7 +63,13 @@ def classify_intent(question: str) -> IntentType:
     
     # Détection des requêtes générales sur le contenu du projet
     lower_q = question.lower()
-    if any(kw in lower_q for kw in ["contien quoi", "contient quoi", "quels documents", "quelles données", "liste des fichiers", "quels fichiers", "qu'est-ce qu'il y a", "base de données", "base de donnée", "fichiers existants"]):
+    if any(kw in lower_q for kw in [
+        "contien quoi", "contient quoi", "quels documents", "quelles données", 
+        "liste des fichiers", "quels fichiers", "qu'est-ce qu'il y a", 
+        "base de données", "base de donnée", "fichiers existants",
+        "type de donnees", "type de donnée", "type de fichier", 
+        "types de fichiers", "types de données", "types de donnees"
+    ]):
         logger.info("   → Intention identifiée comme requête générale de métadonnées.")
         return "general"
 
