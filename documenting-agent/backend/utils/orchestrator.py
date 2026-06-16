@@ -284,6 +284,36 @@ def orchestrate(
         # 3. Traitement selon l'intention identifiée
         if intent == "pdf":
             if vectorstore is None:
+                # Vérifions si des documents de type texte existent bien en base de données pour ce projet
+                pdf_files_in_db = []
+                try:
+                    conn = psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASSWORD)
+                    cursor = conn.cursor(cursor_factory=RealDictCursor)
+                    cursor.execute(
+                        "SELECT file_name FROM documents WHERE project_id = %s AND is_indexed = TRUE;",
+                        (project_id,)
+                    )
+                    db_docs = cursor.fetchall()
+                    cursor.close()
+                    conn.close()
+                    for doc in db_docs:
+                        fname = doc["file_name"]
+                        ext = os.path.splitext(fname)[1].lower()
+                        if ext in (".pdf", ".docx", ".doc"):
+                            pdf_files_in_db.append(fname)
+                except Exception as db_err:
+                    logger.error(f"Erreur de lecture BDD pour détection PDF : {db_err}")
+
+                if pdf_files_in_db:
+                    result["agent_used"] = "Orchestrateur (Alerte RAG)"
+                    result["answer"] = (
+                        f"Le fichier PDF **{', '.join(pdf_files_in_db)}** est bien présent dans le projet, "
+                        "mais il semble être **scanné (image)** ou ne pas contenir de texte sélectionnable.\n\n"
+                        "⚠️ **Solution** : Veuillez importer un document PDF contenant du texte sélectionnable "
+                        "ou un fichier Word (.docx) pour que le chatbot puisse l'analyser."
+                    )
+                    return result
+
                 if dataframes:
                     logger.info("ℹ️ Aucun index PDF disponible mais des tables Excel existent. Utilisation du LLM général pour répondre.")
                     llm = get_llm(temperature=0.7, max_tokens=1024)
