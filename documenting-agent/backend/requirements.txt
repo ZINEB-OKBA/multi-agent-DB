@@ -129,4 +129,6 @@ xlrd>=2.0.1
 # Utils
 aiofiles>=23.2.1
 psycopg2-binary
+pytesseract>=0.3.10
+pdf2image>=1.17.0
 

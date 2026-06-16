@@ -3,6 +3,9 @@ FROM python:3.13-slim
 # Install system dependencies (like build-essential for compiling some dependencies if needed)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    tesseract-ocr \
+    tesseract-ocr-fra \
+    poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

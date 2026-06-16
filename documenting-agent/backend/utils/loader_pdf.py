@@ -24,6 +24,30 @@ def _load_pdf(file_path: str) -> List[Document]:
     for d in docs:
         d.metadata["source"] = Path(file_path).name
     logger.info(f"   → {len(docs)} page(s)")
+    
+    # Si le texte extrait est vide, on tente une extraction par OCR !
+    full_text = "".join(d.page_content for d in docs).strip()
+    if not full_text:
+        logger.info("⚠️ Aucun texte extrait par PyPDFLoader. Tentative d'OCR via pdf2image et pytesseract...")
+        try:
+            from pdf2image import convert_from_path
+            import pytesseract
+            
+            # Convertir le PDF en images
+            images = convert_from_path(file_path)
+            ocr_docs = []
+            for i, img in enumerate(images):
+                # Utiliser tesseract pour extraire le texte de l'image (Français + Anglais)
+                text = pytesseract.image_to_string(img, lang="fra+eng")
+                ocr_docs.append(Document(
+                    page_content=text,
+                    metadata={"source": Path(file_path).name, "page": i}
+                ))
+            logger.info(f"   → OCR réussi. {len(ocr_docs)} page(s) extraite(s) par OCR.")
+            return ocr_docs
+        except Exception as ocr_err:
+            logger.error(f"❌ Échec de l'OCR sur {file_path} : {ocr_err}")
+            
     return docs
 
 
