@@ -149,6 +149,14 @@ def run_staffing_agent(
 
     # ── 2. Détecter l'année dans la question et filtrer les records ──
     year_filter = _extract_year_from_question(question)
+    if not year_filter and history:
+        for h in reversed(history[-6:]):
+            if h.get("role") == "user":
+                year_filter = _extract_year_from_question(h.get("content", ""))
+                if year_filter:
+                    logger.info(f"📅 Année {year_filter} récupérée depuis l'historique récent.")
+                    break
+
     if year_filter:
         filtered_records = [r for r in all_records if r.get("mois", "").startswith(year_filter)]
         if filtered_records:
@@ -162,6 +170,14 @@ def run_staffing_agent(
     employe_filter = force_employe or (_extract_employe_from_question(
         question, all_records
     ) if all_records else None)
+
+    if not employe_filter and not force_employe and history:
+        for h in reversed(history[-6:]):
+            if h.get("role") == "user":
+                employe_filter = _extract_employe_from_question(h.get("content", ""), all_records)
+                if employe_filter:
+                    logger.info(f"👤 Employé {employe_filter} récupéré depuis l'historique récent.")
+                    break
 
     # ── 4. Extraire les paramètres financiers de la question ──────
     ca_facturable           = _extract_amount(question, ["ca", "chiffre d'affaires", "facturé", "ca facturable"])
@@ -188,6 +204,14 @@ def run_staffing_agent(
     graph_keywords = ["graphe", "graphique", "chart", "plot", "barre", "courbe", "diagramme", "barchart", "piechart", "dessine", "représente", "visuelle", "visualiser", "char", "pie", "bar", "grap", "line"]
     if any(kw in lower_q for kw in graph_keywords):
         charts = generate_staffing_charts(analysis, employe_filter, theme_mode=theme_mode)
+        
+        # Filtrer pour ne renvoyer que le type demandé s'il est spécifié
+        if "pie" in lower_q or "camembert" in lower_q:
+            charts = [c for c in charts if c.get("type") == "pie"]
+        elif "line" in lower_q or "courbe" in lower_q:
+            charts = [c for c in charts if c.get("type") == "line"]
+        elif "bar" in lower_q or "barre" in lower_q:
+            charts = [c for c in charts if c.get("type") == "bar"]
     else:
         charts = []
     result["charts"] = charts
