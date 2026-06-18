@@ -225,7 +225,7 @@ def get_pandas_agent(dataframes: Dict[str, pd.DataFrame], verbose: bool = True):
         verbose=verbose,
         allow_dangerous_code=True,
         max_iterations=10,
-        agent_executor_kwargs={"handle_parsing_errors": True},
+        agent_executor_kwargs={"handle_parsing_errors": True, "return_intermediate_steps": True},
         prefix = (
     "Tu es un Expert Data Analyst multi-domaines. Tu travailles sur des projets variés "
     "(Finance, Ingénierie, RH, etc.) et tu dois fournir des analyses de haute précision.\n\n"
@@ -370,7 +370,12 @@ def run_excel_agent(question: str, dataframes: Dict[str, pd.DataFrame], history:
 
     try:
         result = agent.invoke({"input": question_extended})
-        answer = result.get("output", str(result))
+        
+        if isinstance(result, dict):
+            answer = result.get("output", "")
+        else:
+            answer = str(result)
+            
         logger.info(f"✅ Réponse Excel ({len(answer)} caractères)")
         
         # Capture des graphiques dessinés (Plotly et Matplotlib)
@@ -378,14 +383,30 @@ def run_excel_agent(question: str, dataframes: Dict[str, pd.DataFrame], history:
         charts_matplotlib = _capture_matplotlib_figures()
         charts = charts_plotly + charts_matplotlib
         
-        # Fallback: si aucun graphique n'a été détecté mais que la réponse contient un bloc de code python
+        # Fallback: si aucun graphique n'a été détecté mais que la réponse ou la trajectoire contient du code python
         if not charts and any(kw in lower_q for kw in ["graphe", "graphique", "chart", "plot", "barre", "courbe", "diagramme", "barchart", "piechart"]):
             import re
-            code_blocks = re.findall(r"```python\s*(.*?)\s*```", answer, re.DOTALL)
+            
+            # Construire la trajectoire complète pour chercher du code
+            full_trajectory = answer
+            if isinstance(result, dict) and "intermediate_steps" in result:
+                for action, obs in result["intermediate_steps"]:
+                    full_trajectory += f"\n{getattr(action, 'tool_input', '')}\n{getattr(action, 'log', '')}\n{obs}"
+            
+            code_blocks = re.findall(r"```python\s*(.*?)\s*```", full_trajectory, re.DOTALL)
             if code_blocks:
-                logger.info(f"🔍 Aucun graphique détecté mais {len(code_blocks)} bloc(s) de code Python trouvé(s) dans la réponse. Exécution en fallback...")
+                logger.info(f"🔍 Aucun graphique détecté mais {len(code_blocks)} bloc(s) de code Python trouvé(s) dans la trajectoire. Exécution en fallback...")
                 for code in code_blocks:
                     try:
+                        # Nettoyer le code des chargements de fichiers locaux fictifs
+                        clean_lines = []
+                        for line in code.splitlines():
+                            if ("read_csv" in line or "read_excel" in line) and "df =" in line:
+                                clean_lines.append("# " + line)
+                            else:
+                                clean_lines.append(line)
+                        cleaned_code = "\n".join(clean_lines)
+
                         # Exécuter le code en injectant les dataframes dans le namespace
                         local_ns = {}
                         df_list = list(dataframes.values())
@@ -395,7 +416,7 @@ def run_excel_agent(question: str, dataframes: Dict[str, pd.DataFrame], history:
                             local_ns[name] = df
                         
                         # Exécuter le code
-                        exec(code, globals(), local_ns)
+                        exec(cleaned_code, globals(), local_ns)
                     except Exception as exec_err:
                         logger.warning(f"⚠️ Échec de l'exécution du code en fallback : {exec_err}")
                 
