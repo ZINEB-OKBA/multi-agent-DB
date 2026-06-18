@@ -32,7 +32,7 @@ async def index_project_documents(req: IndexRequest):
     
     try:
         # On force la reconstruction et la vectorisation en RAM immédiatement
-        vectorstore, dataframes = rebuild_resources_from_postgres(req.projectId)
+        vectorstore, dataframes, _ = rebuild_resources_from_postgres(req.projectId)
         
         # Calcul du nombre de chunks pour le rapport de succès
         chunks_count = 0

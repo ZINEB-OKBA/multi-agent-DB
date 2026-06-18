@@ -18,8 +18,24 @@ from pathlib import Path
 from typing import Dict
 
 import pandas as pd
+import matplotlib
+matplotlib.use("Agg")
 from langchain_experimental.agents import create_pandas_dataframe_agent
 from utils.llm_factory import get_llm
+from typing import Dict, Any, Optional
+import plotly.io as pio
+import base64
+from plotly.io._base_renderers import ExternalRenderer
+
+class Base64ImageRenderer(ExternalRenderer):
+    def __init__(self):
+        self.figures = []
+    def render(self, fig, **kwargs):
+        self.figures.append(fig)
+
+plotly_capture_renderer = Base64ImageRenderer()
+pio.renderers["base64_capture"] = plotly_capture_renderer
+pio.renderers.default = "base64_capture"
 
 logger = logging.getLogger(__name__)
 
@@ -209,8 +225,8 @@ def get_pandas_agent(dataframes: Dict[str, pd.DataFrame], verbose: bool = True):
         verbose=verbose,
         allow_dangerous_code=True,
         max_iterations=10,
-        handle_parsing_errors=True, # <--- AJOUTE CETTE LIGNE
-       prefix = (
+        agent_executor_kwargs={"handle_parsing_errors": True},
+        prefix = (
     "Tu es un Expert Data Analyst multi-domaines. Tu travailles sur des projets variés "
     "(Finance, Ingénierie, RH, etc.) et tu dois fournir des analyses de haute précision.\n\n"
     
@@ -232,15 +248,168 @@ def get_pandas_agent(dataframes: Dict[str, pd.DataFrame], verbose: bool = True):
     return agent
 
 
-def run_excel_agent(question: str, dataframes: Dict[str, pd.DataFrame]) -> str:
+def _capture_matplotlib_figures() -> list:
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import io
+    import base64
+
+    charts = []
+    fignums = plt.get_fignums()
+    logger.info(f"📊 Capture des figures matplotlib : {len(fignums)} figures détectées.")
+    for num in fignums:
+        try:
+            fig = plt.figure(num)
+            buf = io.BytesIO()
+            fig.savefig(buf, format="png", dpi=150, bbox_inches="tight")
+            buf.seek(0)
+            b64 = base64.b64encode(buf.read()).decode("utf-8")
+            
+            # Tenter de deviner ou extraire le titre du graphique
+            title = "Analyse graphique"
+            if fig.axes:
+                ax = fig.axes[0]
+                if ax.get_title():
+                    title = ax.get_title()
+            
+            charts.append({
+                "title": title,
+                "type": "bar",
+                "base64": f"data:image/png;base64,{b64}",
+                "chartjs": None
+            })
+        except Exception as e:
+            logger.error(f"Erreur de capture de la figure matplotlib {num}: {e}")
+    
+    # Nettoyer toutes les figures en mémoire
+    plt.close("all")
+    return charts
+
+
+def _capture_plotly_figures(theme_mode: str = "light") -> list:
+    charts = []
+    logger.info(f"📊 Capture des figures Plotly : {len(plotly_capture_renderer.figures)} figures détectées.")
+    for i, fig in enumerate(plotly_capture_renderer.figures):
+        try:
+            # Détecter le type de graphique dynamiquement
+            chart_type = "bar"
+            if fig.data:
+                p_type = fig.data[0].type
+                if p_type == "pie":
+                    chart_type = "pie"
+                elif p_type in ["scatter", "scattergl"]:
+                    chart_type = "line"
+            
+            # Appliquer le layout Premium et le thème dynamique
+            from utils.staffing_charts import apply_premium_layout
+            apply_premium_layout(fig, theme_mode, chart_type)
+
+            # Convertir la figure Plotly en image PNG statique
+            img_bytes = fig.to_image(format="png", width=800, height=500, scale=1.5)
+            b64 = base64.b64encode(img_bytes).decode("utf-8")
+            
+            # Récupérer le titre
+            title = "Analyse graphique"
+            if hasattr(fig, "layout") and fig.layout.title and fig.layout.title.text:
+                title = fig.layout.title.text
+                
+            charts.append({
+                "title": title,
+                "type": chart_type,
+                "base64": f"data:image/png;base64,{b64}",
+                "plotly": fig.to_plotly_json(),
+                "chartjs": None
+            })
+        except Exception as e:
+            logger.error(f"Erreur de capture de la figure Plotly {i}: {e}")
+            
+    # Réinitialiser la liste
+    plotly_capture_renderer.figures = []
+    return charts
+
+
+def run_excel_agent(question: str, dataframes: Dict[str, pd.DataFrame], history: Optional[list] = None, theme_mode: str = "light") -> Dict[str, Any]:
     """Exécute l'agent Pandas sur la question posée."""
     logger.info(f"❓ Question Excel : {question}")
+    
+    # Réinitialiser les figures Plotly
+    plotly_capture_renderer.figures = []
+    
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    
+    # Tout nettoyer avant l'exécution
+    plt.close("all")
+
     agent = get_pandas_agent(dataframes)
+    
+    history_context = ""
+    if history:
+        history_context = "\n\n══════════════════════════════════════════════\nHISTORIQUE DES ÉCHANGES RÉCENTS :\n══════════════════════════════════════════════\n"
+        for h in history[-8:]:
+            role = "Utilisateur" if h.get("role") == "user" else "Assistant"
+            content = h.get("content", "")
+            if len(content) > 300:
+                content = content[:300] + "..."
+            history_context += f"- {role} : {content}\n"
+
+    # Si l'utilisateur veut un graphe, on force explicitement le prompt à utiliser Plotly Express
+    lower_q = question.lower()
+    if any(kw in lower_q for kw in ["graphe", "graphique", "chart", "plot", "barre", "courbe", "diagramme", "barchart", "piechart"]):
+        question_extended = (
+            question + history_context +
+            "\n\nIMPORTANT : Puisque l'utilisateur demande explicitement un graphique, "
+            "tu DOIS impérativement écrire du code Python pour tracer ce graphique (ex: bar, pie ou line chart) "
+            "à l'aide de la bibliothèque Plotly Express (import plotly.express as px) et appeler fig.show() à la fin de ton code. "
+            "Ne te contente pas d'écrire des tableaux ou du texte."
+        )
+    else:
+        question_extended = question + history_context
+
     try:
-        result = agent.invoke({"input": question})
+        result = agent.invoke({"input": question_extended})
         answer = result.get("output", str(result))
         logger.info(f"✅ Réponse Excel ({len(answer)} caractères)")
-        return answer
+        
+        # Capture des graphiques dessinés (Plotly et Matplotlib)
+        charts_plotly = _capture_plotly_figures(theme_mode)
+        charts_matplotlib = _capture_matplotlib_figures()
+        charts = charts_plotly + charts_matplotlib
+        
+        # Fallback: si aucun graphique n'a été détecté mais que la réponse contient un bloc de code python
+        if not charts and any(kw in lower_q for kw in ["graphe", "graphique", "chart", "plot", "barre", "courbe", "diagramme", "barchart", "piechart"]):
+            import re
+            code_blocks = re.findall(r"```python\s*(.*?)\s*```", answer, re.DOTALL)
+            if code_blocks:
+                logger.info(f"🔍 Aucun graphique détecté mais {len(code_blocks)} bloc(s) de code Python trouvé(s) dans la réponse. Exécution en fallback...")
+                for code in code_blocks:
+                    try:
+                        # Exécuter le code en injectant les dataframes dans le namespace
+                        local_ns = {}
+                        df_list = list(dataframes.values())
+                        if len(df_list) == 1:
+                            local_ns["df"] = df_list[0]
+                        for name, df in dataframes.items():
+                            local_ns[name] = df
+                        
+                        # Exécuter le code
+                        exec(code, globals(), local_ns)
+                    except Exception as exec_err:
+                        logger.warning(f"⚠️ Échec de l'exécution du code en fallback : {exec_err}")
+                
+                # Recapturer après exécution en fallback
+                charts_plotly = _capture_plotly_figures(theme_mode)
+                charts_matplotlib = _capture_matplotlib_figures()
+                charts = charts_plotly + charts_matplotlib
+
+        # Filtrer si non demandé
+        if not any(kw in lower_q for kw in ["graphe", "graphique", "chart", "plot", "barre", "courbe", "diagramme", "barchart", "piechart"]):
+            charts = []
+            
+        return {"answer": answer, "charts": charts}
     except Exception as e:
         logger.error(f"❌ Erreur agent Excel : {e}")
-        return f"❌ Erreur lors de l'analyse Excel : {str(e)}"
+        plt.close("all")
+        return {"answer": f"❌ Erreur lors de l'analyse Excel : {str(e)}", "charts": []}

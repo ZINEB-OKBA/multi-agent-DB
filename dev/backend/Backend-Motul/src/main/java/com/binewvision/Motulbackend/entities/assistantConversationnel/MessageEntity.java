@@ -36,4 +36,8 @@ public class MessageEntity {
     // Stocké sous forme de chaîne JSON TEXT : "[{\"fileName\":\"...\",\"pages\":\"...\",\"extractCount\":1}]"
     @Column(columnDefinition = "TEXT")
     private String sourcesJson;
+
+    // ── CONFIGURATION DES GRAPHES ──
+    @Column(columnDefinition = "TEXT")
+    private String chartsJson;
 }

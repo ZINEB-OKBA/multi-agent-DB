@@ -131,4 +131,7 @@ aiofiles>=23.2.1
 psycopg2-binary
 pytesseract>=0.3.10
 pdf2image>=1.17.0
+matplotlib>=3.7.0
+plotly>=5.18.0
+kaleido==0.2.1
 

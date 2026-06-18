@@ -13,24 +13,32 @@ from langchain_groq import ChatGroq
 
 load_dotenv()
 logger     = logging.getLogger(__name__)
-MODEL_NAME = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
+MODEL_NAME = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
 
+
+from langchain_ollama import ChatOllama
 
 def get_llm(
     temperature: float = 0.0,
     max_tokens:  int   = 2048,
     streaming:   bool  = False,
     callbacks:   Optional[List] = None,
-) -> ChatGroq:
+):
     """
-    Retourne une instance ChatGroq.
+    Retourne une instance ChatGroq ou ChatOllama.
+    """
+    # Si le modèle contient un ':' (comme llama3.3:70b) ou commence par des tags locaux connus
+    if ":" in MODEL_NAME or any(MODEL_NAME.startswith(prefix) for prefix in ["llama3.3", "phi4", "qwen", "llama3.2"]):
+        ollama_url = os.getenv("OLLAMA_BASE_URL", "http://host.docker.internal:11434")
+        logger.info(f"🔧 LLM : Ollama local ({MODEL_NAME}) | URL: {ollama_url} | streaming={streaming}")
+        return ChatOllama(
+            model       = MODEL_NAME,
+            base_url    = ollama_url,
+            temperature = temperature,
+            streaming   = streaming,
+            callbacks   = callbacks or [],
+        )
 
-    Args:
-        temperature : Créativité (0.0 = déterministe).
-        max_tokens  : Longueur max de la réponse.
-        streaming   : Active le streaming token par token.
-        callbacks   : Liste de callbacks LangChain (ex: WebSocketStreamHandler).
-    """
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         raise EnvironmentError(
@@ -39,7 +47,7 @@ def get_llm(
             "Clé gratuite sur https://console.groq.com"
         )
 
-    logger.info(f"🔧 LLM : {MODEL_NAME} | streaming={streaming}")
+    logger.info(f"🔧 LLM : Groq {MODEL_NAME} | streaming={streaming}")
 
     return ChatGroq(
         model       = MODEL_NAME,

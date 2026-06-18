@@ -34,6 +34,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -89,6 +90,22 @@ public class ConversationServiceImpl implements ConversationService {
                     } else {
                         dto.setSources(new ArrayList<>());
                     }
+
+                    // ── DÉSÉRIALISATION DES GRAPHES POUR L'HISTORIQUE ──
+                    if (message.getChartsJson() != null && !message.getChartsJson().isEmpty()) {
+                        try {
+                            List<Map<String, Object>> charts = jacksonObjectMapper.readValue(
+                                    message.getChartsJson(),
+                                    new TypeReference<List<Map<String, Object>>>() {}
+                            );
+                            dto.setCharts(charts);
+                        } catch (Exception e) {
+                            logger.error("Erreur de lecture des graphiques JSON pour le message {}", message.getId(), e);
+                            dto.setCharts(new ArrayList<>());
+                        }
+                    } else {
+                        dto.setCharts(new ArrayList<>());
+                    }
                     return dto;
                 })
                 .collect(Collectors.toList());
@@ -141,12 +158,27 @@ public class ConversationServiceImpl implements ConversationService {
         userMessage.setSendOn(LocalDateTime.now());
         messageRepository.save(userMessage);
 
-        // ── C. Appel Python FastAPI ───────────────────────────────────────────
+        // ── C. Appel Python FastAPI avec historique des 8 derniers messages (4 questions/réponses) ──
         String fastApiUrl = applicationProperties.getExternalAiConfig().getUrl();
-        Map<String, Object> pythonPayload = Map.of(
-                "question", object.getContent(),
-                "project",  object.getProject() != null ? object.getProject() : ""
-        );
+
+        List<MessageEntity> previousMessages = messageRepository.findByConversationIdOrderByIdAsc(conversation.getId());
+        List<Map<String, String>> history = new ArrayList<>();
+        int size = previousMessages.size();
+        // Le dernier message (size - 1) est le message utilisateur que l'on vient de sauvegarder.
+        // On souhaite extraire au maximum les 8 messages précédant ce dernier message.
+        int start = Math.max(0, size - 9);
+        for (int i = start; i < size - 1; i++) {
+            MessageEntity msg = previousMessages.get(i);
+            history.add(Map.of(
+                "role", msg.getSendBy() == SenderEnum.USER ? "user" : "assistant",
+                "content", msg.getContent() != null ? msg.getContent() : ""
+            ));
+        }
+
+        Map<String, Object> pythonPayload = new HashMap<>();
+        pythonPayload.put("question", object.getContent());
+        pythonPayload.put("project", object.getProject() != null ? object.getProject() : "");
+        pythonPayload.put("history", history);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -155,6 +187,7 @@ public class ConversationServiceImpl implements ConversationService {
         // ── D. Parser la réponse Python avec JsonNode (plus sûr) ─────────────
         String   agentAnswer = "Erreur : impossible de contacter l'IA.";
         List<SourceReferenceDto> sources = new ArrayList<>();
+        List<Map<String, Object>> charts = new ArrayList<>();
 
         try {
             ResponseEntity<JsonNode> response = restTemplate.exchange(
@@ -177,6 +210,19 @@ public class ConversationServiceImpl implements ConversationService {
                         sources.add(dto);
                     }
                 }
+
+                // Extraire les graphiques [ {title, type, base64, chartjs} ]
+                JsonNode chartsNode = body.path("charts");
+                if (chartsNode.isArray()) {
+                    for (JsonNode ch : chartsNode) {
+                        try {
+                            Map<String, Object> chartMap = jacksonObjectMapper.convertValue(ch, new TypeReference<Map<String, Object>>() {});
+                            charts.add(chartMap);
+                        } catch (Exception e) {
+                            logger.error("Erreur de conversion du graphique", e);
+                        }
+                    }
+                }
             }
         } catch (Exception e) {
             logger.error("Erreur appel Python FastAPI : {}", e.getMessage(), e);
@@ -190,12 +236,20 @@ public class ConversationServiceImpl implements ConversationService {
             logger.error("Erreur de sérialisation des sources", e);
         }
 
+        String chartsJson = "[]";
+        try {
+            chartsJson = jacksonObjectMapper.writeValueAsString(charts);
+        } catch (Exception e) {
+            logger.error("Erreur de sérialisation des graphiques", e);
+        }
+
         MessageEntity agentEntity = new MessageEntity();
         agentEntity.setConversation(conversation);
         agentEntity.setContent(agentAnswer);
         agentEntity.setSendBy(SenderEnum.AGENT);
         agentEntity.setSendOn(LocalDateTime.now());
         agentEntity.setSourcesJson(sourcesJson);
+        agentEntity.setChartsJson(chartsJson);
         messageRepository.save(agentEntity);
 
         // ── F. Construire le DTO de retour vers Angular ───────────────────────
@@ -206,6 +260,7 @@ public class ConversationServiceImpl implements ConversationService {
         responseDto.setSendOn(agentEntity.getSendOn());
         responseDto.setProject(object.getProject());
         responseDto.setSources(sources);
+        responseDto.setCharts(charts);
         responseDto.setConversation(
                 ObjectMapper.map(conversation, ConversationDto.class)
         );

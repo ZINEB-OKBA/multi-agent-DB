@@ -14,6 +14,7 @@ from utils.llm_factory import test_groq_connection
 # Routers épurés (uniquement la gestion Stateless : Documents & Chat)
 from routers.chat import router as chat_router
 from routers.documents import router as documents_router
+from routers.staffing import router as staffing_router
 
 # ── Logging ────────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -63,6 +64,9 @@ app.include_router(documents_router, prefix="/api")
 
 # Le chat REST répond sur : POST /api/chat/message (et WebSocket sur /ws/chat)
 app.include_router(chat_router, prefix="/api")
+
+# Agent Staffing
+app.include_router(staffing_router, prefix="/api")
 
 
 # ── Routes Système de Base ─────────────────────────────────────────────────────

@@ -31,7 +31,7 @@ from utils.llm_factory import get_llm
 from utils.loader_excel import load_dataframe, run_excel_agent
 
 logger = logging.getLogger(__name__)
-IntentType = Literal["pdf", "excel", "general", "unknown"]
+IntentType = Literal["pdf", "excel", "staffing", "general", "unknown"]
 
 # ── REGISTRE GLOBAL EN RAM (CACHE DES PROJETS ACTIFS) ─────────────────────────
 RAM_PROJECTS_CACHE: Dict[int, Dict] = {}
@@ -43,52 +43,85 @@ DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "postgres")
 
 
-# ── 1. CLASSIFICATEUR D'INTENTION ─────────────────────────────────────────────
+# ── 1. CLASSIFICATEUR D'INTENTION MODIFIÉ ─────────────────────────────────────
 
 INTENT_PROMPT = ChatPromptTemplate.from_template(
-    """Tu es un orchestrateur expert pour un système RAG multi-agent. 
+    """Tu es un orchestrateur expert pour un système RAG multi-agent.
 Ta mission est de router la question vers l'agent spécialisé le plus pertinent.
 
 ### CRITÈRES DE DÉCISION :
-- **excel** : données structurées, tableaux, listes d'entreprises, calculs de frais.
-- **pdf** : explications de concepts, procédures, résumés de textes longs.
+- **staffing** : questions sur des employés, TJM, jours travaillés, coûts RH,
+                 rentabilité d'une ressource humaine, occupation, gain/perte employé,
+                 ainsi que les listes d'employés/collaborateurs d'une année spécifique.
+                 Exemples : "combien a travaillé Jean ?", "TJM de Marie",
+                 "est-ce que cet employé est rentable ?", "occupation en mars",
+                 "cite les employés de l'année 2026", "liste des collaborateurs en 2024".
+- **excel** : données structurées, tableaux de chiffres, calculs financiers
+                 NON liés aux ressources humaines.
+- **pdf** : explications de concepts, procédures, résumés de textes longs, salutations, 
+             questions de politesse ou de conversation générale.
 
-Réponds UNIQUEMENT par le mot : `pdf` ou `excel`.
+Réponds UNIQUEMENT par le mot : `pdf`, `excel` ou `staffing`.
+{history_context}
 Question : {question}"""
 )
 
-def classify_intent(question: str) -> IntentType:
-    """Utilise Llama-3.3-70B pour router la demande vers l'agent PDF ou Excel."""
+def classify_intent(question: str, history: Optional[List[dict]] = None) -> IntentType:
+    """Utilise l'LLM pour router la demande vers l'agent PDF, Excel ou Staffing."""
     logger.info(f"🧭 Classification de l'intention : '{question[:80]}'")
     
-    # Détection des requêtes générales sur le contenu du projet
     lower_q = question.lower()
-    if any(kw in lower_q for kw in [
-        "contien quoi", "contient quoi", "quels documents", "quelles données", 
-        "liste des fichiers", "quels fichiers", "qu'est-ce qu'il y a", 
-        "base de données", "base de donnée", "fichiers existants",
-        "type de donnees", "type de donnée", "type de fichier", 
-        "types de fichiers", "types de données", "types de donnees"
-    ]):
-        logger.info("   → Intention identifiée comme requête générale de métadonnées.")
-        return "general"
+    
+    # 1. Gestion des salutations directes pour éviter de déranger les agents de calculs
+    if any(greet in lower_q for greet in ["bonjour", "salut", "hello", "hi", "bonsoir", "hey"]):
+        logger.info("   → Salutation détectée. Routage par défaut vers PDF (Conversation générale).")
+        return "pdf"
+        
+    # 2. Détection des requêtes générales sur le contenu du projet (plus flexible)
+    general_keywords = [
+        "contien", "contient", "document", "donnee", "donnée", "donne",
+        "fichier", "qu'y a-t-il", "qu'il y a", "qu'est-ce qu'il y a",
+        "contenu", "present dans", "présent dans", "existe dans"
+    ]
+    if any(kw in lower_q for kw in general_keywords) and any(kw2 in lower_q for kw2 in ["quel", "qu'est", "liste", "quoi", "exi", "y a"]):
+        # Si la question porte sur des personnes, des employés ou des salaires, on ne route pas vers 'general'
+        if not any(emp_kw in lower_q for emp_kw in ["employe", "employé", "employer", "collaborateur", "qui", "nom", "salaire", "tjm"]):
+            logger.info("   → Intention identifiée comme requête générale de métadonnées.")
+            return "general"
+
+    history_context = ""
+    if history:
+        history_context = "Historique des échanges récents :\n"
+        for h in history[-8:]:
+            role = "Utilisateur" if h.get("role") == "user" else "Assistant"
+            content = h.get("content", "")
+            if len(content) > 200:
+                content = content[:200] + "..."
+            history_context += f"- {role} : {content}\n"
+        history_context += "\n"
 
     llm = get_llm(temperature=0.0, max_tokens=10)
     chain = INTENT_PROMPT | llm | StrOutputParser()
-    result = chain.invoke({"question": question}).strip().lower()
+    result = chain.invoke({"question": question, "history_context": history_context}).strip().lower()
     
-    intent = "excel" if "excel" in result else "pdf"
+    if "staffing" in result:
+        intent = "staffing"
+    elif "excel" in result:
+        intent = "excel"
+    else:
+        intent = "pdf"
+        
     logger.info(f"   → Intention retenue : {intent}")
     return intent
 
 
-# ── 2. EXTRACTEUR STATELESS DIRECT DEPUIS POSTGRESQL ──────────────────────────
+# ── 2. EXTRACTEUR STATELESS DIRECT DEPUIS POSTGRESQL MODIFIÉ ──────────────────
 
 def rebuild_resources_from_postgres(project_id: int):
     """
     Se connecte à PostgreSQL, télécharge les chaînes Base64 du projet,
     nettoie les en-têtes Data URL (data:...;base64,), décode le flux en mémoire
-    et initialise les structures de données volatiles (RAM).
+    et initialise les structures de données volatiles (RAM), y compris docs_raw.
     """
     logger.info(f"🔄 [BDD ➔ RAM] Extraction et reconstruction de la base documentaire pour le projet ID: {project_id}")
     
@@ -109,13 +142,15 @@ def rebuild_resources_from_postgres(project_id: int):
         RAM_PROJECTS_CACHE[project_id] = {
             "vectorstore": None,
             "dataframes": {},
+            "docs_raw": [],
             "doc_ids": set(),
             "updated_at": datetime.now()
         }
-        return None, {}
+        return None, {}, []
 
     all_chunks: List[Document] = []
     dataframes: Dict[str, pd.DataFrame] = {}
+    docs_raw: List[Dict[str, Any]] = []
 
     for doc in db_docs:
         file_name = doc['file_name']
@@ -137,9 +172,16 @@ def rebuild_resources_from_postgres(project_id: int):
         # Création du fichier temporaire volatile
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             try:
-                file_bytes = base64.b64decode(base64_content)
-                tmp.write(file_bytes)
+                file_bytes_decoded = base64.b64decode(base64_content)
+                tmp.write(file_bytes_decoded)
                 temp_filepath = tmp.name
+                
+                # Enregistrement des bytes bruts pour le Staffing
+                docs_raw.append({
+                    "file_name": file_name,
+                    "file_bytes": file_bytes_decoded,
+                    "suffix": suffix,
+                })
             except Exception as decode_err:
                 logger.error(f"❌ Échec du décodage Base64 pour '{file_name}' : {decode_err}")
                 continue
@@ -180,10 +222,11 @@ def rebuild_resources_from_postgres(project_id: int):
     RAM_PROJECTS_CACHE[project_id] = {
         "vectorstore": vectorstore,
         "dataframes": dataframes,
+        "docs_raw": docs_raw,
         "doc_ids": {doc['id'] for doc in db_docs},
         "updated_at": datetime.now()
     }
-    return vectorstore, dataframes
+    return vectorstore, dataframes, docs_raw
 
 
 def get_project_resources(project_id: int):
@@ -207,7 +250,7 @@ def get_project_resources(project_id: int):
         if cached_doc_ids == db_doc_ids:
             logger.info(f"⚡ [CACHE RAM HIT] Récupération instantanée du contexte projet {project_id}")
             res = RAM_PROJECTS_CACHE[project_id]
-            return res["vectorstore"], res["dataframes"]
+            return res["vectorstore"], res["dataframes"], res.get("docs_raw", [])
         else:
             logger.info(f"🔄 [CACHE RAM INVALID] Les documents indexés en BDD ont changé. Rechargement...")
     
@@ -230,7 +273,7 @@ Tu doit extraire les informations demandées avec une fidélité absolue, sans r
 
 CONTEXTE DE SPÉCIFICATION :
 {context}
-
+{history_section}
 QUESTION :
 {question}
 
@@ -238,7 +281,7 @@ RÉPONSE FORMATEE EN MARKDOWN CORRETE :"""
 )
 
 # 🎯 FIXATION : run_pdf_agent accepte désormais directement la liste de 'docs' pré-extraits
-def run_pdf_agent(question: str, docs: List[Document]) -> str:
+def run_pdf_agent(question: str, docs: List[Document], history: Optional[List[dict]] = None) -> str:
     """Reçoit les documents pré-extraits par l'orchestrateur et génère la réponse finale via le LLM."""
     logger.info(f"📄 Agent PDF activé avec {len(docs)} documents sources.")
     
@@ -247,38 +290,129 @@ def run_pdf_agent(question: str, docs: List[Document]) -> str:
     )
     logger.info(f"   → Contexte assemblé : {len(context)} caractères")
 
+    history_section = ""
+    if history:
+        history_section = "\n\n══════════════════════════════════════════════\nHISTORIQUE DES ÉCHANGES RÉCENTS :\n══════════════════════════════════════════════\n"
+        for h in history[-8:]:
+            role = "Utilisateur" if h.get("role") == "user" else "Assistant"
+            content = h.get("content", "")
+            if len(content) > 500:
+                content = content[:500] + "..."
+            history_section += f"- {role} : {content}\n"
+
     llm = get_llm(temperature=0.1, max_tokens=2048)
     chain = RAG_PROMPT | llm | StrOutputParser()
-    answer = chain.invoke({"context": context, "question": question})
+    answer = chain.invoke({"context": context, "question": question, "history_section": history_section})
     logger.info(f"✅ Réponse PDF générée ({len(answer)} caractères)")
     return answer
 
 
-# ── 4. ORCHESTRATEUR PRINCIPAL UNIFIÉ ─────────────────────────────────────────
+def get_staffing_docs_raw_from_postgres(project_id: int) -> list:
+    """
+    Lit les fichiers staffing depuis la table staffing_documents si elle existe,
+    sinon se rabat sur la table documents (qui contient tous les fichiers du projet).
+    Décode le base64 en bytes directement en RAM — rien sur le disque.
+    """
+    logger.info(f"📂 [Staffing BDD→RAM] Lecture des fichiers staffing projet {project_id}")
+    
+    conn   = psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASSWORD)
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    
+    # Vérification de l'existence de la table staffing_documents
+    cursor.execute("""
+        SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name = 'staffing_documents'
+        );
+    """)
+    has_staffing_table = cursor.fetchone()["exists"]
+    
+    if has_staffing_table:
+        logger.info("   → Utilisation de la table dédiée 'staffing_documents'")
+        cursor.execute(
+            """SELECT file_name, content, extension
+               FROM staffing_documents
+               WHERE project_id = %s
+               ORDER BY uploaded_at DESC;""",
+            (project_id,)
+        )
+    else:
+        logger.info("   → Table 'staffing_documents' inexistante. Utilisation de la table 'documents'")
+        cursor.execute(
+            """SELECT file_name, content, NULL as extension
+               FROM documents
+               WHERE project_id = %s
+               ORDER BY uploaded_at DESC;""",
+            (project_id,)
+        )
+        
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    docs_raw = []
+    for row in rows:
+        file_name = row["file_name"]
+        content   = row["content"] or ""
+        ext       = row.get("extension")
+        suffix    = ext or os.path.splitext(file_name)[1].lower()
+        if not suffix.startswith("."): suffix = f".{suffix}"
+
+        # Nettoyer le préfixe data-URL
+        if ";base64," in content:
+            pure = re.sub(r'^data:.*?;base64,', '', content)
+        elif "," in content:
+            pure = content.split(",")[1]
+        else:
+            pure = content
+
+        pure = pure.strip().replace(" ", "").replace("\n", "")
+
+        try:
+            file_bytes = base64.b64decode(pure)
+            docs_raw.append({
+                "file_name":  file_name,
+                "file_bytes": file_bytes,   # bytes en RAM, jamais écrits sur disque
+                "suffix":     suffix,
+            })
+            logger.info(f"✅ Décodé en RAM : {file_name} ({len(file_bytes):,} bytes)")
+        except Exception as e:
+            logger.error(f"❌ Erreur décodage '{file_name}': {e}")
+
+    logger.info(f"📊 {len(docs_raw)} fichier(s) staffing chargés en RAM")
+    return docs_raw
+
+
+# ── 4. ORCHESTRATEUR PRINCIPAL UNIFIÉ AVEC LE ROUTAGE STAFFING ────────────────
 
 def orchestrate(
     question: str,
     project_id: int,
     force_agent: Optional[str] = None,
+    history: Optional[List[dict]] = None,
+    theme_mode: Optional[str] = "light",
 ) -> Dict[str, Any]:
     """
     Point d'entrée de l'orchestrateur. Consomme les structures en RAM, route
-    vers le bon agent et extrait les documents sources utilisés pour le RAG.
+    vers le bon agent (PDF, Excel, Staffing) et extrait les sources et graphiques nécessaires.
     """
     result = {
         "agent_used": None,
         "intent": None,
         "answer": "",
         "error": None,
-        "docs": []  # 🎯 Stockera les objets Document LangChain pour construire les sources
+        "docs": [],
+        "charts": [],   # Initialisation pour accueillir les graphiques de l'agent staffing
+        "sources": []   # Initialisation pour accueillir les métadonnées de sources du staffing
     }
 
     try:
         # 1. Récupération immédiate depuis le registre RAM ou reconstruction automatique
-        vectorstore, dataframes = get_project_resources(project_id)
+        vectorstore, dataframes, docs_raw = get_project_resources(project_id)
 
         # 2. Routage intelligent ou forcé
-        intent = force_agent if force_agent in ("pdf", "excel") else classify_intent(question)
+        intent = force_agent if force_agent in ("pdf", "excel", "staffing") else classify_intent(question, history=history)
         result["intent"] = intent
 
         # 3. Traitement selon l'intention identifiée
@@ -342,7 +476,7 @@ def orchestrate(
                 result["answer"] = "Aucun document pertinent trouvé dans l'index FAISS éphémère."
             else:
                 # Exécution de l'agent PDF RAG en lui passant directement les documents isolés
-                result["answer"] = run_pdf_agent(question, docs)
+                result["answer"] = run_pdf_agent(question, docs, history=history)
 
         elif intent == "excel":
             if not dataframes:
@@ -350,10 +484,41 @@ def orchestrate(
                 return result
             
             result["agent_used"] = "Agent Excel (Pandas en RAM)"
-            result["answer"] = run_excel_agent(question, dataframes)
+            excel_res = run_excel_agent(question, dataframes, history=history, theme_mode=theme_mode)
+            result["answer"] = excel_res.get("answer", "")
+            result["charts"] = excel_res.get("charts", [])
             
             # Met à disposition les clés des DataFrames chargés en mémoire comme références de sources
             result["docs"] = list(dataframes.keys()) 
+
+        # ── 4. BLOC DE ROUTAGE POUR L'AGENT STAFFING ───────────────────────────
+        elif intent == "staffing":
+            from agents.staffing_agent import run_staffing_agent
+
+            # Lire depuis staffing_documents (pas documents) — tout en RAM depuis PostgreSQL
+            docs_raw = get_staffing_docs_raw_from_postgres(project_id)
+
+            if not docs_raw:
+                result["error"] = "⚠️ Aucun fichier dans staffing_documents pour ce projet."
+                result["answer"] = result["error"]
+                return result
+
+            staffing_result = run_staffing_agent(
+                question=question,
+                docs_raw=docs_raw,
+                history=history,
+                theme_mode=theme_mode,
+            )
+
+            if staffing_result.get("error"):
+                result["error"] = staffing_result["error"]
+                result["answer"] = staffing_result["error"]
+            else:
+                result["agent_used"] = "Agent Staffing (Base64 PostgreSQL → RAM → Calculs → Graphiques)"
+                result["answer"] = staffing_result["answer"]
+                result["docs"] = []
+                result["charts"] = staffing_result.get("charts", [])
+                result["sources"] = staffing_result.get("sources", [])
 
         elif intent == "general":
             pdf_names = []

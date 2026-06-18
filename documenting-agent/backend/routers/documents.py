@@ -105,7 +105,7 @@ async def receive_and_index_synchronous(payload: SpringBootUploadPayload):
         # Étape 2 : Appel synchrone de l'orchestrateur
         # Cette fonction va lire PostgreSQL, décoder les fichiers en RAM, calculer les embeddings via Ollama,
         # puis monter et stocker les structures de données chaudes dans le RAM_PROJECTS_CACHE global.
-        vectorstore, dataframes = rebuild_resources_from_postgres(project_id)
+        vectorstore, dataframes, _ = rebuild_resources_from_postgres(project_id)
         
         # Étape 3 : Évaluation du volume indexé
         chunks_count = 0

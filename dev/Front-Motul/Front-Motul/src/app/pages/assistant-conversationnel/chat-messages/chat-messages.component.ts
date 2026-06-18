@@ -123,6 +123,7 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
           if (m.sendBy === 'AGENT') this.parseAgentMessage(m, idx);
         });
         setTimeout(() => this.scrollToBottom(), 0);
+        this.renderPlotlyCharts();
       }
     });
   }
@@ -168,7 +169,8 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
         let msg: any = {
           content: res?.content || '',
           sendBy: 'AGENT',
-          sources: res?.sources || []
+          sources: res?.sources || [],
+          charts: res?.charts || []
         };
 
         // Traitement par parseAgentMessage
@@ -179,6 +181,7 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
         this.messages.push(msg);
         this.pendingScroll = true;
         this.cd.detectChanges();
+        this.renderPlotlyCharts();
       },
       error: (err) => {
         console.error('Erreur lors de l\'appel de l\'assistant:', err);
@@ -219,6 +222,7 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
 
     // On conserve les sources déjà extraites ou pré-assignées en mémoire
     const backupSources = m.sources || [];
+    const backupCharts = m.charts || [];
 
     if (typeof m.content === 'object' && m.content !== null) {
       payload = m.content?.response ?? m.content ?? {};
@@ -262,8 +266,9 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
 
     m.user = payload.user || '';
 
-    // Fusion intelligente : Priorité au payload.sources, sinon backup initial
+    // Fusion intelligente : Priorité au payload.sources/charts, sinon backup initial
     m.sources = payload.sources && payload.sources.length > 0 ? payload.sources : backupSources;
+    m.charts = payload.charts && payload.charts.length > 0 ? payload.charts : (payload.response?.charts || backupCharts);
 
     const tableText = payload.table || '';
     if (tableText) {
@@ -427,5 +432,57 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
       csv:  'ki-file-binary',
     };
     return icons[ext || ''] || 'ki-file';
+  }
+
+  private renderPlotlyCharts(): void {
+    const Plotly = (window as any).Plotly;
+    if (!Plotly) {
+      console.warn('Plotly.js is not loaded yet via CDN');
+      return;
+    }
+
+    setTimeout(() => {
+      this.messages.forEach((m, i) => {
+        if (m.charts && m.charts.length > 0) {
+          m.charts.forEach((chart: any, cIdx: number) => {
+            if (chart.plotly) {
+              const elementId = `plotly-chart-${i}-${cIdx}`;
+              const element = document.getElementById(elementId);
+              if (element) {
+                try {
+                  const layout = {
+                    ...chart.plotly.layout,
+                    autosize: true,
+                    width: undefined,
+                    height: 300,
+                    margin: { l: 40, r: 20, t: 40, b: 40 }
+                  };
+                  Plotly.react(element, chart.plotly.data, layout, { responsive: true, displayModeBar: false });
+                } catch (e) {
+                  console.error('Erreur lors du tracé Plotly:', e);
+                }
+              }
+              
+              const tableElementId = `plotly-table-chart-${i}-${cIdx}`;
+              const tableElement = document.getElementById(tableElementId);
+              if (tableElement) {
+                try {
+                  const layout = {
+                    ...chart.plotly.layout,
+                    autosize: true,
+                    width: undefined,
+                    height: 300,
+                    margin: { l: 40, r: 20, t: 40, b: 40 }
+                  };
+                  Plotly.react(tableElement, chart.plotly.data, layout, { responsive: true, displayModeBar: false });
+                } catch (e) {
+                  console.error('Erreur lors du tracé Plotly sur table:', e);
+                }
+              }
+            }
+          });
+        }
+      });
+    }, 150);
   }
 }

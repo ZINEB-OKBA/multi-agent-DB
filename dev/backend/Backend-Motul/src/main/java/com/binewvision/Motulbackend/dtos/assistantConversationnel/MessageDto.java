@@ -9,6 +9,7 @@ import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Data
 @NoArgsConstructor
@@ -27,4 +28,7 @@ public class MessageDto {
     // ── TRANSMISSION DES SOURCES VERS LE FRONTEND ANGULAR ──
     // Contient la liste d'objets structurés mappés depuis ou vers sourcesJson
     private List<SourceReferenceDto> sources;
+
+    // ── TRANSMISSION DES GRAPHES VERS LE FRONTEND ANGULAR ──
+    private List<Map<String, Object>> charts;
 }

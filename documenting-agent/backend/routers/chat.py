@@ -39,11 +39,20 @@ class ChatRequest(BaseModel):
     question:    str
     project:     str  # Reçoit le nom en clair du dropdown (ex: "Outils RH", "3iyadaty")
     force_agent: Optional[str] = None
+    history:     Optional[List[dict]] = None
+    theme_mode:  Optional[str] = "light"
 
 class SourceReference(BaseModel):
     fileName:     str
     pages:        Optional[str] = None
     extractCount: int
+
+class ChartReference(BaseModel):
+    title:   str
+    type:    str
+    base64:  Optional[str] = None
+    chartjs: Optional[dict] = None
+    plotly:  Optional[dict] = None
 
 class ChatResponse(BaseModel):
     project:    str
@@ -52,6 +61,7 @@ class ChatResponse(BaseModel):
     agent_used: str
     intent:     str
     sources:    List[SourceReference] = []  # Liste des sources citées dans la réponse
+    charts:     List[ChartReference] = []
 # ══════════════════════════════════════════════════════════════════════════════
 # FONCTION POLYMOPHE DE RÉSOLUTION D'ID PAR LE NOM
 # ══════════════════════════════════════════════════════════════════════════════
@@ -122,11 +132,21 @@ async def chat_rest(body: ChatRequest):
         result = orchestrate(
             question=question,
             project_id=project_id,
-            force_agent=body.force_agent
+            force_agent=body.force_agent,
+            history=body.history,
+            theme_mode=body.theme_mode,
         )
 
         if result.get("error"):
-            raise HTTPException(status_code=422, detail=result["error"])
+            return ChatResponse(
+                project    = body.project,
+                question   = question,
+                answer     = result.get("answer") or result["error"],
+                agent_used = result.get("agent_used") or "Orchestrateur (Alerte)",
+                intent     = result.get("intent") or "error",
+                sources    = [],
+                charts     = [],
+            )
 
         # ── Construire les sources si l'orchestrateur retourne les docs ────
         sources = []
@@ -139,7 +159,8 @@ async def chat_rest(body: ChatRequest):
             answer     = result["answer"],
             agent_used = result["agent_used"],
             intent     = result["intent"],
-            sources    = sources,                       # ← AJOUTER
+            sources    = sources,
+            charts     = [ChartReference(**c) for c in result.get("charts", [])],
         )
     except HTTPException:
         raise

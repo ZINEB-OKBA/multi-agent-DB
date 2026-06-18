@@ -44,6 +44,7 @@ services:
       - DATA_DIR=${DATA_DIR:-data}
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-nomic-embed-text}
+      - LLM_MODEL=${LLM_MODEL:-llama-3.3-70b-versatile}
       - DB_HOST=staffing_db
       - DB_NAME=Motuldb
       - DB_USER=postgres

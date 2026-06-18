@@ -33,7 +33,7 @@ class IndexService:
         """FallBack rétrocompatible pour les anciens services."""
         try:
             project_id = int(''.join(filter(str.isdigit, project_str)))
-            vectorstore, _ = rebuild_resources_from_postgres(project_id)
+            vectorstore, _, _ = rebuild_resources_from_postgres(project_id)
             return vectorstore
         except Exception:
             return None
@@ -42,7 +42,7 @@ class IndexService:
         """FallBack rétrocompatible pour l'agent Excel."""
         try:
             project_id = int(''.join(filter(str.isdigit, project_str)))
-            _, dataframes = rebuild_resources_from_postgres(project_id)
+            _, dataframes, _ = rebuild_resources_from_postgres(project_id)
             return dataframes
         except Exception:
             return {}

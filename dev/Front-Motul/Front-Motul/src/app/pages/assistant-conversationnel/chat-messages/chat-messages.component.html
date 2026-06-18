@@ -88,6 +88,22 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Graphiques de staffing -->
+                            <div *ngIf="msg.charts && msg.charts.length > 0" class="mt-4 pt-3 border-t border-border">
+                                <p class="text-xs font-semibold text-secondary-foreground uppercase tracking-wide mb-3">
+                                    Graphiques générés
+                                </p>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div *ngFor="let chart of msg.charts; let cIdx = index" class="bg-white dark:bg-zinc-800 rounded-xl p-3 border border-border shadow-sm flex flex-col items-center w-full">
+                                        <p class="text-xs font-semibold text-mono mb-2 text-center w-full">{{ chart.title }}</p>
+                                        <div class="relative w-full flex justify-center min-h-[320px]">
+                                            <div *ngIf="chart.plotly" [id]="'plotly-chart-' + i + '-' + cIdx" class="w-full h-full min-h-[320px]"></div>
+                                            <img *ngIf="!chart.plotly && chart.base64" [src]="chart.base64" [alt]="chart.title" class="max-w-full h-auto rounded-lg" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <button class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost text-primary hover:text-primary mt-1"
@@ -126,6 +142,22 @@
                                         </tr>
                                         </tbody>
                                     </table>
+                                </div>
+
+                                <!-- Graphiques de staffing -->
+                                <div *ngIf="msg.charts && msg.charts.length > 0" class="mt-4 pt-3 border-t border-border">
+                                    <p class="text-xs font-semibold text-secondary-foreground uppercase tracking-wide mb-3">
+                                        Graphiques générés
+                                    </p>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div *ngFor="let chart of msg.charts; let cIdx = index" class="bg-white dark:bg-zinc-800 rounded-xl p-3 border border-border shadow-sm flex flex-col items-center w-full">
+                                            <p class="text-xs font-semibold text-mono mb-2 text-center w-full">{{ chart.title }}</p>
+                                            <div class="relative w-full flex justify-center min-h-[320px]">
+                                                <div *ngIf="chart.plotly" [id]="'plotly-table-chart-' + i + '-' + cIdx" class="w-full h-full min-h-[320px]"></div>
+                                                <img *ngIf="!chart.plotly && chart.base64" [src]="chart.base64" [alt]="chart.title" class="max-w-full h-auto rounded-lg" />
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <button class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost text-primary hover:text-primary"
