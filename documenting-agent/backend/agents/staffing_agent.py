@@ -205,17 +205,46 @@ def run_staffing_agent(
     if any(kw in lower_q for kw in graph_keywords):
         charts = generate_staffing_charts(analysis, employe_filter, theme_mode=theme_mode)
         
-        # Filtrer pour ne renvoyer que le type demandé s'il est spécifié
-        if "pie" in lower_q or "camembert" in lower_q:
-            charts = [c for c in charts if c.get("type") == "pie"]
-        elif "line" in lower_q or "courbe" in lower_q:
-            charts = [c for c in charts if c.get("type") == "line"]
-        elif "bar" in lower_q or "barre" in lower_q:
-            charts = [c for c in charts if c.get("type") == "bar"]
+        # Filtrage thématique précis pour ne renvoyer que les graphiques correspondants
+        matched_charts = []
+        
+        # 1. Rentabilité
+        if any(kw in lower_q for kw in ["rentabilité", "rentabilite", "gain", "perte", "bénéfice", "benefice", "rentable"]):
+            matched_charts.extend([c for c in charts if c.get("title") == "Rentabilité"])
+            
+        # 2. Répartition par projet
+        if any(kw in lower_q for kw in ["projet", "repartition", "répartition", "camembert", "pie"]):
+            matched_charts.extend([c for c in charts if c.get("title") == "Répartition par projet"])
+            
+        # 3. Salaire mensuel comparatif / TJM
+        if any(kw in lower_q for kw in ["tjm", "salaire", "comparatif", "rémunération", "remuneration", "tjm comparatif"]):
+            matched_charts.extend([c for c in charts if "salaire" in c.get("title", "").lower() or "tjm" in c.get("title", "").lower()])
+            
+        # 4. Occupation mensuelle
+        if any(kw in lower_q for kw in ["occupation", "jours", "jour", "travail", "charge", "temps"]):
+            matched_charts.extend([c for c in charts if c.get("title") == "Occupation mensuelle"])
+            
+        # 5. Coût mensuel (historique/évolution, non lié aux projets ou à la rentabilité)
+        if any(kw in lower_q for kw in ["coût", "cout", "dépense", "depense"]) and not any(kw in lower_q for kw in ["projet", "rentabilité", "rentabilite"]):
+            matched_charts.extend([c for c in charts if c.get("title") == "Coût mensuel"])
+
+        # Si des filtres thématiques ont correspondu, on filtre la liste
+        if matched_charts:
+            # Supprimer les doublons tout en gardant l'ordre
+            seen = set()
+            charts = [c for c in matched_charts if c.get("title") not in seen and not seen.add(c.get("title"))]
+        else:
+            # Fallback sur le type visuel si aucun filtre thématique précis n'a fonctionné
+            if "pie" in lower_q or "camembert" in lower_q:
+                charts = [c for c in charts if c.get("type") == "pie"]
+            elif "line" in lower_q or "courbe" in lower_q:
+                charts = [c for c in charts if c.get("type") == "line"]
+            elif "bar" in lower_q or "barre" in lower_q:
+                charts = [c for c in charts if c.get("type") == "bar"]
     else:
         charts = []
     result["charts"] = charts
-    logger.info(f"📈 {len(charts)} graphiques générés.")
+    logger.info(f"📈 {len(charts)} graphiques générés après filtrage.")
 
     # ── 6. Appeler le LLM avec la synthèse ────────────────────────
     synthese = analysis.get("synthese", "")
