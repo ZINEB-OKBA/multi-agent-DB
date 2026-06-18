@@ -225,6 +225,7 @@ def get_pandas_agent(dataframes: Dict[str, pd.DataFrame], verbose: bool = True):
         "CONSIGNES IMPORTANTES POUR LE FORMAT RE-ACT :\n"
         "- La ligne 'Action:' doit obligatoirement être EXACTEMENT 'python_repl_ast' et rien d'autre. Ne traduis pas le nom des outils et ne rajoute aucun texte explicatif sur cette ligne.\n"
         "- La ligne 'Action Input:' doit contenir uniquement le code Python à exécuter.\n"
+        "- **REGLE CRITIQUE DE FIN DE TOUR** : Si tu génères une 'Action:', tu ne dois JAMAIS générer 'Final Answer:' dans le même message. Tu DOIS t'arrêter immédiatement après la ligne 'Action Input:'. Tu attendras de recevoir le résultat ('Observation:') avant de pouvoir, lors d'un tour suivant, écrire 'Final Answer:'.\n"
         "- Seule la réponse finale ('Final Answer:') doit être rédigée en français.\n"
         "CONSIGNES DE TRAVAIL :\n"
         "1. **Exploration & Rigueur** : Utilise l'outil `python_repl_ast` pour analyser le dataframe avant de répondre. Ne devine pas les résultats.\n"
