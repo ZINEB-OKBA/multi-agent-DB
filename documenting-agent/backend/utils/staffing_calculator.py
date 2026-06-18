@@ -158,8 +158,12 @@ def compute_staffing_analysis(
             "statut":             "✅ Rentable" if gain_net >= 0 else "❌ En perte",
         }
 
+    # Détecter les années présentes dans les données
+    annees_presentes = sorted(list({str(m)[:4] for m in df["mois"] if pd.notna(m) and len(str(m)) >= 4}))
+    annees_str = ", ".join(annees_presentes) if annees_presentes else "Non spécifiées"
+
     # ── Synthèse narrative ────────────────────────────────────────
-    synthese = _build_synthese(par_employe, par_mois, rentabilite, employe_filter)
+    synthese = _build_synthese(par_employe, par_mois, rentabilite, employe_filter, annees_str)
 
     return {
         "par_employe":  par_employe,
@@ -181,11 +185,12 @@ def _build_synthese(
     par_mois: Dict,
     rentabilite: Optional[Dict],
     employe_filter: Optional[str],
+    annees_str: str,
 ) -> str:
     lines = []
 
     if employe_filter:
-        lines.append(f"## Analyse de staffing — {employe_filter}")
+        lines.append(f"## Analyse de staffing — {employe_filter} (Année(s) : {annees_str})")
         for emp, data in par_employe.items():
             lines.append(f"\n### {emp}")
             lines.append(f"- **Jours travaillés** : {data['total_jours']} jours sur {data['nb_mois']} mois")
@@ -206,7 +211,7 @@ def _build_synthese(
                     f"| {m['mois']} | {m['jours']}j | {statut} {m['taux_occ_pct']}% | {m['cout']:,.2f} Dhs | {ca_str} | {gain_str} | {marge_str} |"
                 )
     else:
-        lines.append(f"## Synthèse globale de staffing — {len(par_employe)} employé(s)")
+        lines.append(f"## Synthèse globale de staffing — {len(par_employe)} employé(s) (Année(s) : {annees_str})")
         lines.append("\n| Employé | Jours travaillés | Salaire mensuel | Coût calculé | Projets |")
         lines.append("| :--- | :--- | :--- | :--- | :--- |")
         for emp, data in par_employe.items():
