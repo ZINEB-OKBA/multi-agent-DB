@@ -225,7 +225,8 @@ def get_pandas_agent(dataframes: Dict[str, pd.DataFrame], verbose: bool = True):
         verbose=verbose,
         allow_dangerous_code=True,
         max_iterations=10,
-        agent_executor_kwargs={"handle_parsing_errors": True, "return_intermediate_steps": True},
+        return_intermediate_steps=True,
+        agent_executor_kwargs={"handle_parsing_errors": True},
         prefix = (
     "Tu es un Expert Data Analyst multi-domaines. Tu travailles sur des projets variés "
     "(Finance, Ingénierie, RH, etc.) et tu dois fournir des analyses de haute précision.\n\n"
