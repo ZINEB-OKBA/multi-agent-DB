@@ -302,7 +302,7 @@ def _capture_plotly_figures(theme_mode: str = "light") -> list:
                     chart_type = "line"
             
             # Appliquer le layout Premium et le thème dynamique
-            from utils.staffing_charts import apply_premium_layout
+            from utils.staffing_charts import apply_premium_layout, decode_plotly_bdata
             apply_premium_layout(fig, theme_mode, chart_type)
 
             # Convertir la figure Plotly en image PNG statique
@@ -318,7 +318,7 @@ def _capture_plotly_figures(theme_mode: str = "light") -> list:
                 "title": title,
                 "type": chart_type,
                 "base64": f"data:image/png;base64,{b64}",
-                "plotly": fig.to_plotly_json(),
+                "plotly": decode_plotly_bdata(json.loads(pio.to_json(fig))),
                 "chartjs": None
             })
         except Exception as e:

@@ -21,6 +21,33 @@ logger = logging.getLogger(__name__)
 
 
 # ══════════════════════════════════════════════════════════════════
+# DÉCODAGE RECURSIF DE BDATA (POUR LES GRAPHIQUES NON EXPLOITABLES)
+# ══════════════════════════════════════════════════════════════════
+
+def decode_plotly_bdata(obj):
+    """
+    Décode récursivement les données binaires base64 'bdata' de Plotly
+    en listes Python standards pour éviter que Plotly.js ou Pydantic
+    ne reçoivent des structures illisibles/incomplètes.
+    """
+    if isinstance(obj, dict):
+        if "dtype" in obj and "bdata" in obj:
+            try:
+                import numpy as np
+                data_bytes = base64.b64decode(obj["bdata"])
+                arr = np.frombuffer(data_bytes, dtype=obj["dtype"])
+                return arr.tolist()
+            except Exception as e:
+                logger.error(f"Erreur décodage bdata : {e}")
+                return obj
+        else:
+            return {k: decode_plotly_bdata(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [decode_plotly_bdata(x) for x in obj]
+    return obj
+
+
+# ══════════════════════════════════════════════════════════════════
 # FONCTIONS EXIGÉES PAR L'UTILISATEUR (PREMIUM STYLING & JSON)
 # ══════════════════════════════════════════════════════════════════
 
@@ -86,8 +113,9 @@ def generate_plotly_json(
     # 3. Application du style premium & thème
     apply_premium_layout(fig, theme_mode, chart_type)
 
-    # 4. Sérialisation JSON
-    return pio.to_json(fig)
+    # 4. Sérialisation JSON avec décodage des bdata
+    decoded_dict = decode_plotly_bdata(json.loads(pio.to_json(fig)))
+    return json.dumps(decoded_dict)
 
 
 def apply_premium_layout(fig, theme_mode: str, chart_type: str):
@@ -250,7 +278,7 @@ def _chart_occupation_mensuelle(df: pd.DataFrame, employe_filter: Optional[str],
             "title":  "Occupation mensuelle",
             "type":   "bar",
             "base64": b64,
-            "plotly": json.loads(pio.to_json(fig)),
+            "plotly": decode_plotly_bdata(json.loads(pio.to_json(fig))),
             "chartjs": {
                 "type": "bar",
                 "data": {"labels": months, "datasets": datasets},
@@ -293,7 +321,7 @@ def _chart_cout_mensuel(par_mois: Dict, theme_mode: str) -> Optional[Dict]:
             "title":  "Coût mensuel",
             "type":   "line",
             "base64": b64,
-            "plotly": json.loads(pio.to_json(fig)),
+            "plotly": decode_plotly_bdata(json.loads(pio.to_json(fig))),
             "chartjs": {
                 "type": "line",
                 "data": {
@@ -341,7 +369,7 @@ def _chart_repartition_projets(par_projet: Dict, theme_mode: str) -> Optional[Di
             "title":  "Répartition par projet",
             "type":   "pie",
             "base64": b64,
-            "plotly": json.loads(pio.to_json(fig)),
+            "plotly": decode_plotly_bdata(json.loads(pio.to_json(fig))),
             "chartjs": {
                 "type": "pie",
                 "data": {
@@ -386,7 +414,7 @@ def _chart_tjm_comparatif(par_employe: Dict, theme_mode: str) -> Optional[Dict]:
             "title":  "Salaire mensuel comparatif",
             "type":   "bar",
             "base64": b64,
-            "plotly": json.loads(pio.to_json(fig)),
+            "plotly": decode_plotly_bdata(json.loads(pio.to_json(fig))),
             "chartjs": {
                 "type": "bar",
                 "data": {
@@ -452,7 +480,7 @@ def _chart_rentabilite(rentabilite: Dict, theme_mode: str) -> Optional[Dict]:
             "title":  "Rentabilité",
             "type":   "bar",
             "base64": b64,
-            "plotly": json.loads(pio.to_json(fig)),
+            "plotly": decode_plotly_bdata(json.loads(pio.to_json(fig))),
             "chartjs": {
                 "type": "bar",
                 "data": {
