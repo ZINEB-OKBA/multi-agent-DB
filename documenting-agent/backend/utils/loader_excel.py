@@ -218,9 +218,21 @@ def get_pandas_agent(dataframes: Dict[str, pd.DataFrame], verbose: bool = True):
 
     logger.info(f"🤖 Création agent Pandas ({len(df_list)} DataFrame(s))")
 
+    if isinstance(df_input, list):
+        schema_info = ""
+        for i, d in enumerate(df_input):
+            cols = ", ".join([f"`{col}` ({dtype})" for col, dtype in zip(d.columns, d.dtypes)])
+            schema_info += f"- DataFrame {i} : {cols}\n"
+    else:
+        cols_list = ", ".join([f"`{col}` ({dtype})" for col, dtype in zip(df_input.columns, df_input.dtypes)])
+        schema_info = f"Colonnes de `df` : {cols_list}"
+
     prefix_str = (
         "You are working with a pandas dataframe in python. The name of the dataframe is `df`.\n"
         "You should use the tools below to answer the question run code and inspect the results.\n\n"
+        f"STRUCTURE DES DONNÉES :\n"
+        f"{schema_info}\n"
+        "⚠️ ATTENTION : Respecte STRICTEMENT la casse (majuscules/minuscules) et l'orthographe exacte des colonnes listées ci-dessus dans ton code Python. Par exemple, si la colonne s'appelle 'Salaire', n'écris pas 'salaire'.\n\n"
         "Tu es un Expert Data Analyst multi-domaines. Réponds exclusivement en français dans la réponse finale (Final Answer).\n"
         "CONSIGNES IMPORTANTES POUR LE FORMAT RE-ACT :\n"
         "- La ligne 'Action:' doit obligatoirement être EXACTEMENT 'python_repl_ast' et rien d'autre. Ne traduis pas le nom des outils et ne rajoute aucun texte explicatif sur cette ligne.\n"
