@@ -162,6 +162,71 @@ def extract_from_dataframe(df: pd.DataFrame) -> List[Dict[str, Any]]:
 # EXTRACTION DEPUIS PDF (OCR)
 # ══════════════════════════════════════════════════════════════════
 
+def _parse_split_pdf_table(text_pages: List[str]) -> List[Dict[str, Any]]:
+    """
+    Parse un tableau qui a été coupé horizontalement et réparti sur deux pages PDF.
+    Page 1 contient : id, prenom, salaire, projet, jours, budget, mois.
+    Page 2 contient : annee.
+    """
+    if len(text_pages) < 2:
+        return []
+
+    page1_lines = [line.strip() for line in text_pages[0].splitlines() if line.strip()]
+    page2_lines = [line.strip() for line in text_pages[1].splitlines() if line.strip()]
+
+    if not page1_lines or not page2_lines:
+        return []
+
+    header1 = page1_lines[0].lower()
+    header2 = page2_lines[0].lower()
+
+    # Vérification que la structure ressemble bien à notre table coupée
+    if not ("prenom" in header1 or "salaire" in header1) or "annee" not in header2:
+        return []
+
+    records = []
+    data1 = page1_lines[1:]
+    data2 = page2_lines[1:]
+
+    # Parcourir et assembler chaque ligne
+    for line1, line2 in zip(data1, data2):
+        parts1 = line1.split()
+        if len(parts1) < 7:
+            continue
+
+        try:
+            val_id = parts1[0]
+            prenom = parts1[1]
+            salaire = _safe_float(parts1[2])
+            mois = parts1[-1]
+            budget = _safe_float(parts1[-2])
+            jours = _safe_float(parts1[-3])
+            projet = " ".join(parts1[3:-3])
+
+            # Récupère l'année sur la page 2
+            annee = line2.split()[0] if line2 else "2026"
+
+            mois_complet = _combine_mois_annee(mois, annee)
+
+            rec = {
+                "employe": f"{prenom} (ID: {val_id})" if val_id else prenom,
+                "projet": projet,
+                "mois": mois_complet,
+                "jours": jours,
+                "tjm": salaire,
+                "cout": round(jours * salaire, 2),
+                "facturable": True,
+                "budget": budget
+            }
+            records.append(rec)
+        except Exception as e:
+            logger.warning(f"Erreur parsing ligne PDF coupée : {e}")
+            continue
+
+    logger.info(f"🧩 Assemblage PDF réussi : {len(records)} records reconstitués.")
+    return records
+
+
 def extract_from_pdf_bytes(file_bytes: bytes, file_name: str = "doc.pdf") -> List[Dict[str, Any]]:
     """
     Extrait les données de staffing depuis un PDF en mémoire.
@@ -194,7 +259,11 @@ def extract_from_pdf_bytes(file_bytes: bytes, file_name: str = "doc.pdf") -> Lis
 
         os.unlink(tmp_path)
 
-        # Si aucun tableau trouvé → parsing regex du texte brut
+        # Si aucun tableau structuré trouvé, tenter d'assembler la table coupée en pages
+        if not records and len(text_pages) >= 2:
+            records = _parse_split_pdf_table(text_pages)
+
+        # Si toujours rien, tenter le parsing regex historique
         if not records and text_pages:
             full_text = "\n".join(text_pages)
             records = _parse_text_staffing(full_text)

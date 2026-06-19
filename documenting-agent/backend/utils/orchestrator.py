@@ -25,7 +25,7 @@ from langchain_core.documents import Document
 from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_ollama import OllamaEmbeddings
+from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 
 from utils.llm_factory import get_llm
 from utils.loader_excel import load_dataframe, run_excel_agent
@@ -210,10 +210,9 @@ def rebuild_resources_from_postgres(project_id: int):
     # Montage du VectorStore FAISS éphémère en RAM
     vectorstore = None
     if all_chunks:
-        logger.info(f"🔢 Vectorisation en RAM de {len(all_chunks)} chunks via Ollama...")
-        embeddings = OllamaEmbeddings(
-            model="nomic-embed-text",
-            base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        logger.info(f"🔢 Vectorisation en RAM de {len(all_chunks)} chunks via FastEmbed (all-MiniLM-L6-v2)...")
+        embeddings = FastEmbedEmbeddings(
+            model_name="sentence-transformers/all-MiniLM-L6-v2"
         )
         vectorstore = FAISS.from_documents(all_chunks, embeddings)
         logger.info("✅ Index FAISS temporaire créé avec succès en RAM.")
@@ -264,12 +263,13 @@ RAG_PROMPT = ChatPromptTemplate.from_template(
     """Tu es un assistant expert en extraction et analyse documentaire.
 Tu doit extraire les informations demandées avec une fidélité absolue, sans rien inventer ni généraliser.
 
-⚠️ DIRECTIVES STRICTES DE MISE EN FORME :
-1. Présente TOUJOURS tes réponses de manière aérée et hautement lisible.
-2. Utilise des titres Markdown clairs (## pour les sections principales, ### pour les sous-sections).
-3. Structure tes explications avec des listes à puces aérées ou des tableaux Markdown.
-4. Intègre des émojis contextuels et pertinents au début des titres et des points clés pour guider l'œil.
-5. Mets en gras (**Texte**) les concepts, règles de gestion et champs obligatoires critiques.
+⚠️ DIRECTIVES STRICTES DE MISE EN FORME ET COMPORTEMENT :
+1. Si la QUESTION de l'utilisateur est une simple salutation (comme "bonjour", "hello", "salut") ou une phrase de politesse générique, réponds simplement et amicalement par une salutation (ex: "Bonjour ! Comment puis-je vous aider aujourd'hui ?") sans extraire ou lister les informations du contexte.
+2. Présente TOUJOURS tes réponses de manière aérée et hautement lisible.
+3. Utilise des titres Markdown clairs (## pour les sections principales, ### pour les sous-sections).
+4. Structure tes explications avec des listes à puces aérées ou des tableaux Markdown.
+5. Intègre des émojis contextuels et pertinents au début des titres et des points clés pour guider l'œil.
+6. Mets en gras (**Texte**) les concepts, règles de gestion et champs obligatoires critiques.
 
 CONTEXTE DE SPÉCIFICATION :
 {context}
