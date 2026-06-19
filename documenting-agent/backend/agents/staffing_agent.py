@@ -55,6 +55,9 @@ RÈGLES DE RÉPONSE :
 4. Si l'utilisateur pose une question sur un employé spécifique, concentre ta réponse exclusivement sur cet employé et ne parle pas des autres.
 5. Ne donne des recommandations, d'analyses de rentabilité/gain/perte ou de taux d'occupation que si la question le demande ou y fait référence.
 6. Utilise des tableaux Markdown et mets en **gras** les chiffres importants pour plus de lisibilité.
+7. NE génère JAMAIS de liens d'images Markdown (ex: `![Nom](url_image.png)`) ou de balises HTML d'images (`<img>`). Les graphiques sont gérés et injectés automatiquement par l'application, tu ne dois pas essayer de les dessiner en format texte ou markdown.
+8. Sois direct. Ne fais pas de longues introductions, réponds immédiatement à la question.
+9. NE fais JAMAIS de mentions ou d'hypothèses sur les couleurs des graphiques (ex: ne dis pas qu'un élément est rouge, vert, etc.) car le style visuel est géré dynamiquement par l'interface.
 
 {history_section}
 
@@ -179,17 +182,28 @@ def run_staffing_agent(
                     logger.info(f"👤 Employé {employe_filter} récupéré depuis l'historique récent.")
                     break
 
-    # ── 4. Extraire les paramètres financiers de la question ──────
+    # ── 4. Détecter le projet dans la question ────────────────────
+    projet_filter = _extract_projet_from_question(question, all_records) if all_records else None
+    if not projet_filter and history:
+        for h in reversed(history[-6:]):
+            if h.get("role") == "user":
+                projet_filter = _extract_projet_from_question(h.get("content", ""), all_records)
+                if projet_filter:
+                    logger.info(f"📁 Projet {projet_filter} récupéré depuis l'historique récent.")
+                    break
+
+    # ── 5. Extraire les paramètres financiers de la question ──────
     ca_facturable           = _extract_amount(question, ["ca", "chiffre d'affaires", "facturé", "ca facturable"])
     cout_journalier_interne = _extract_amount(question, ["coût interne", "salaire journalier", "cout journalier"])
 
-    # ── 5. Calculer l'analyse ─────────────────────────────────────
+    # ── 6. Calculer l'analyse ─────────────────────────────────────
     if not all_records and year_filter:
         analysis = {"erreur": f"Aucune donnée de staffing disponible pour l'année {year_filter}."}
     else:
         analysis = compute_staffing_analysis(
             records                  = all_records,
             employe_filter           = employe_filter,
+            projet_filter            = projet_filter,
             ca_facturable            = ca_facturable,
             cout_journalier_interne  = cout_journalier_interne,
         )
@@ -210,7 +224,10 @@ def run_staffing_agent(
         
         # 1. Rentabilité
         if any(kw in lower_q for kw in ["rentabilité", "rentabilite", "gain", "perte", "bénéfice", "benefice", "rentable"]):
-            matched_charts.extend([c for c in charts if c.get("title") == "Rentabilité"])
+            if any(emp_kw in lower_q for emp_kw in ["employe", "employé", "employer", "collaborateur", "ressource", "chaque", "tous", "comparatif"]):
+                matched_charts.extend([c for c in charts if c.get("title") == "Taux de gain par employé"])
+            else:
+                matched_charts.extend([c for c in charts if c.get("title") == "Rentabilité"])
             
         # 2. Répartition par projet
         if any(kw in lower_q for kw in ["projet", "repartition", "répartition", "camembert", "pie"]):
@@ -286,17 +303,34 @@ def _extract_year_from_question(question: str) -> Optional[str]:
 def _extract_employe_from_question(question: str, records: List[Dict]) -> Optional[str]:
     """
     Cherche si un nom d'employé connu est mentionné dans la question.
-    Retourne le nom exact ou None (= analyse tous les employés).
+    Retourne le nom exact (ou le nom de base si plusieurs possèdent ce nom) ou None.
     """
     employes = list({r["employe"] for r in records if r.get("employe")})
     q_lower  = question.lower()
 
+    # Trier pour vérifier d'abord les correspondances les plus spécifiques (avec ID)
     for emp in employes:
-        # Cherche le prénom ou nom de famille
-        parts = emp.lower().split()
-        if any(p in q_lower for p in parts if len(p) > 2):
-            logger.info(f"Employé détecté dans la question : {emp}")
+        if emp.lower() in q_lower:
             return emp
+        # Essayer sans parenthèses pour l'ID
+        emp_clean_id = emp.lower().replace("(", "").replace(")", "").replace(":", "")
+        if emp_clean_id in q_lower:
+            return emp
+        # Essayer avec le nom de base et le numéro d'ID n'importe où dans la question
+        base_name = re.sub(r"\s*\(id:\s*\d+\)", "", emp, flags=re.IGNORECASE).strip().lower()
+        m = re.search(r"\(id:\s*(\d+)\)", emp, re.IGNORECASE)
+        if m:
+            id_num = m.group(1)
+            if base_name in q_lower and id_num in q_lower:
+                return emp
+
+    # Si l'utilisateur n'a pas spécifié d'ID mais a juste donné le nom de base
+    for emp in employes:
+        base_name = re.sub(r"\s*\(id:\s*\d+\)", "", emp, flags=re.IGNORECASE).strip()
+        parts = base_name.lower().split()
+        if any(p in q_lower for p in parts if len(p) > 2):
+            logger.info(f"Employé générique détecté dans la question : {base_name}")
+            return base_name
 
     return None
 
@@ -316,4 +350,18 @@ def _extract_amount(question: str, keywords: List[str]) -> Optional[float]:
                     return float(m.group(1).replace(" ", "").replace(",", "."))
                 except ValueError:
                     pass
+    return None
+
+
+def _extract_projet_from_question(question: str, records: List[Dict]) -> Optional[str]:
+    """
+    Cherche si un nom de projet connu est mentionné dans la question.
+    Retourne le nom exact ou None.
+    """
+    projets = list({r["projet"] for r in records if r.get("projet")})
+    q_lower = question.lower()
+    for proj in projets:
+        if proj.lower() in q_lower:
+            logger.info(f"Projet détecté dans la question : {proj}")
+            return proj
     return None

@@ -45,6 +45,7 @@ _COL_MAP = {
     "facturable": ["facturable", "billable", "facturé"],
     "budget":     ["budget", "budget_projet", "ca", "chiffre d'affaires", "facture", "montant_facture", "billing", "revenue"],
     "annee":      ["annee", "année", "year", "an"],
+    "id":         ["id", "id_collaborateur", "id_employe", "matricule", "code", "identifiant"],
 }
 
 
@@ -123,7 +124,16 @@ def extract_from_dataframe(df: pd.DataFrame) -> List[Dict[str, Any]]:
     for _, row in df.iterrows():
         rec: Dict[str, Any] = {}
 
-        rec["employe"]    = str(row.get(mapping.get("employe", ""), "Inconnu")).strip()
+        emp_name = str(row.get(mapping.get("employe", ""), "Inconnu")).strip()
+        emp_id_raw = str(row.get(mapping.get("id", ""), "")).strip()
+        if emp_id_raw and emp_id_raw.lower() != "nan" and emp_id_raw.lower() != "none" and emp_id_raw != "0" and emp_id_raw != "":
+            # clean up raw float representation e.g. "1.0" -> "1"
+            if emp_id_raw.endswith(".0"):
+                emp_id_raw = emp_id_raw[:-2]
+            rec["employe"] = f"{emp_name} (ID: {emp_id_raw})"
+        else:
+            rec["employe"] = emp_name
+
         rec["projet"]     = str(row.get(mapping.get("projet",  ""), "N/A")).strip()
         
         # Récupérer mois et année pour combiner

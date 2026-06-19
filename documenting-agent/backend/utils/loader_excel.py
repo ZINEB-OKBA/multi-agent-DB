@@ -208,6 +208,28 @@ def load_uploaded_tables(uploaded_files) -> Dict[str, pd.DataFrame]:
 
 # ── Agent Pandas ───────────────────────────────────────────────────────────────
 
+def sanitize_python_code(code: str) -> str:
+    """Nettoie le code Python généré par le LLM (retire les backticks markdown et le texte conversationnel)."""
+    code = code.strip()
+    import re
+    # Extrait le contenu du bloc de code markdown si présent
+    match = re.search(r"```(?:python)?\n?(.*?)\n?```", code, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    
+    # Élimine les phrases/commentaires conversationnels à la fin
+    lines = code.splitlines()
+    cleaned_lines = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("(") and stripped.endswith(")"):
+            continue
+        if any(stripped.startswith(kw) for kw in ["Note :", "Note:", "Remarque :", "Remarque:", "Attention :", "Attention:"]):
+            continue
+        cleaned_lines.append(line)
+    return "\n".join(cleaned_lines).strip()
+
+
 def get_pandas_agent(dataframes: Dict[str, pd.DataFrame], verbose: bool = True):
     """Crée un agent LangChain Pandas branché sur Groq."""
     _ensure_tabulate()  # tabulate requis par to_markdown() dans le prompt
@@ -236,7 +258,7 @@ def get_pandas_agent(dataframes: Dict[str, pd.DataFrame], verbose: bool = True):
         "Tu es un Expert Data Analyst multi-domaines. Réponds exclusivement en français dans la réponse finale (Final Answer).\n"
         "CONSIGNES IMPORTANTES POUR LE FORMAT RE-ACT :\n"
         "- La ligne 'Action:' doit obligatoirement être EXACTEMENT 'python_repl_ast' et rien d'autre. Ne traduis pas le nom des outils et ne rajoute aucun texte explicatif sur cette ligne.\n"
-        "- La ligne 'Action Input:' doit contenir uniquement le code Python à exécuter.\n"
+        "- La ligne 'Action Input:' doit contenir uniquement le code Python brut à exécuter. Ne mets pas de backticks (```python ... ```) dans Action Input.\n"
         "- **REGLE CRITIQUE DE FIN DE TOUR** : Si tu génères une 'Action:', tu ne dois JAMAIS générer 'Final Answer:' dans le même message. Tu DOIS t'arrêter immédiatement après la ligne 'Action Input:'. Tu attendras de recevoir le résultat ('Observation:') avant de pouvoir, lors d'un tour suivant, écrire 'Final Answer:'.\n"
         "- Seule la réponse finale ('Final Answer:') doit être rédigée en français.\n"
         "CONSIGNES DE TRAVAIL :\n"
@@ -257,6 +279,16 @@ def get_pandas_agent(dataframes: Dict[str, pd.DataFrame], verbose: bool = True):
         prefix=prefix_str
     )
     
+    # Nettoyage automatique du code passé à l'outil python_repl_ast
+    for tool in agent.tools:
+        if tool.name == "python_repl_ast":
+            original_run = tool._run
+            def patched_run(query: str, *args, **kwargs):
+                sanitized = sanitize_python_code(query)
+                logger.info(f"🧹 Code Python nettoyé pour l'outil :\n{sanitized}")
+                return original_run(sanitized, *args, **kwargs)
+            tool._run = patched_run
+
     return agent
 
 

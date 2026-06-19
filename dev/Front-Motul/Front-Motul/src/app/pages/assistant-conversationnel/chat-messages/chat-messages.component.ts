@@ -256,7 +256,7 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
         .replace(/^- (.+)$/gm,
             '<p class="ml-4 text-sm list-disc mb-1"> $1</p>')
         .replace(/(<p class="ml-4 text-sm list-disc mb-1"> .*?<\/p>\n?)+/g, (items: string) => {
-          const cleanItems = items.replace(/ /g, '');
+          const cleanItems = items;
           return `<ul class="my-2 space-y-0.5 list-disc pl-5">${cleanItems.split('\n').map(i => i.trim() ? `<li class="text-sm">${i.replace(/<p.*?>|<\/p>/g, '')}</li>` : '').join('')}</ul>`;
         })
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')

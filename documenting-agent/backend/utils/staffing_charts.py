@@ -136,15 +136,15 @@ def apply_premium_layout(fig, theme_mode: str, chart_type: str):
         ),
         paper_bgcolor=bg_color,
         plot_bgcolor=plot_bg_color,
-        margin=dict(l=80, r=20, t=30, b=80),
+        margin=dict(l=50, r=20, t=40, b=120),
         
-        # Positionnement vertical de la légende à droite
+        # Positionnement horizontal de la légende en bas
         legend=dict(
-            orientation="v",
-            yanchor="middle",
-            y=0.5,
-            xanchor="left",
-            x=1.02,
+            orientation="h",
+            yanchor="top",
+            y=-0.3,
+            xanchor="center",
+            x=0.5,
             bgcolor="rgba(0,0,0,0)",
             font=dict(color=font_color)
         )
@@ -212,6 +212,11 @@ def generate_staffing_charts(
     # 5. Rentabilité gain/perte
     if rentabilite:
         c = _chart_rentabilite(rentabilite, theme_mode)
+        if c: charts.append(c)
+
+    # 6. Taux de gain comparatif par employé
+    if len(par_employe) > 1:
+        c = _chart_rentabilite_employes(par_employe, rentabilite, theme_mode)
         if c: charts.append(c)
 
     return charts
@@ -495,4 +500,93 @@ def _chart_rentabilite(rentabilite: Dict, theme_mode: str) -> Optional[Dict]:
         }
     except Exception as e:
         logger.error(f"Erreur chart rentabilité : {e}")
+        return None
+
+
+# ══════════════════════════════════════════════════════════════════
+# GRAPHIQUE 6 — Taux de gain par employé
+# ══════════════════════════════════════════════════════════════════
+
+def _chart_rentabilite_employes(par_employe: Dict, rentabilite: Optional[Dict], theme_mode: str) -> Optional[Dict]:
+    try:
+        emps = list(par_employe.keys())
+        if not emps:
+            return None
+            
+        data_rows = []
+        for e in emps:
+            data = par_employe[e]
+            # 1. Hypothèse Budgets Réels (depuis l'Excel)
+            total_ca = sum(m.get("ca", 0.0) for m in data.get("mois_detail", []))
+            total_cout = data.get("total_cout", 0.0)
+            taux_reel = round((total_ca - total_cout) / total_ca * 100, 1) if total_ca > 0 else 0.0
+            data_rows.append({
+                "Employé": e,
+                "Taux de gain (%)": taux_reel,
+                "Hypothèse": "Budgets réels (Excel)"
+            })
+            
+            # 2. Hypothèse CA Global Partagé Équitablement
+            if rentabilite and "ca_facturable" in rentabilite:
+                ca_partage = rentabilite["ca_facturable"] / len(emps)
+                taux_partage = round((ca_partage - total_cout) / ca_partage * 100, 1) if ca_partage > 0 else 0.0
+                data_rows.append({
+                    "Employé": e,
+                    "Taux de gain (%)": taux_partage,
+                    "Hypothèse": "CA Global partagé équitablement"
+                })
+                
+        df_margin = pd.DataFrame(data_rows)
+        
+        fig = px.bar(
+            df_margin,
+            x="Employé",
+            y="Taux de gain (%)",
+            color="Hypothèse",
+            barmode="group",
+            title="📈 Taux de gain comparatif par employé (%)",
+            labels={"Taux de gain (%)": "Taux de gain (%)", "Employé": "Employé"},
+            template="plotly_white",
+            color_discrete_map={
+                "Budgets réels (Excel)": "#27AE60",
+                "CA Global partagé équitablement": "#3B82F6"
+            }
+        )
+        
+        apply_premium_layout(fig, theme_mode, "bar")
+        b64 = _plotly_to_base64(fig, width=800, height=450)
+        
+        # Format chartjs
+        labels_chartjs = emps
+        datasets = []
+        # Group by Hypothèse
+        for hypo, grp in df_margin.groupby("Hypothèse"):
+            color = "#27AE60" if hypo == "Budgets réels (Excel)" else "#3B82F6"
+            datasets.append({
+                "label": hypo,
+                "data": [grp[grp["Employé"] == e]["Taux de gain (%)"].values[0] for e in emps],
+                "backgroundColor": color
+            })
+            
+        return {
+            "title": "Taux de gain par employé",
+            "type": "bar",
+            "base64": b64,
+            "plotly": decode_plotly_bdata(json.loads(pio.to_json(fig))),
+            "chartjs": {
+                "type": "bar",
+                "data": {
+                    "labels": labels_chartjs,
+                    "datasets": datasets
+                },
+                "options": {
+                    "responsive": True,
+                    "plugins": {
+                        "title": {"display": True, "text": "Taux de gain par employé (%)"}
+                    }
+                }
+            }
+        }
+    except Exception as e:
+        logger.error(f"Erreur chart rentabilité employés : {e}")
         return None
