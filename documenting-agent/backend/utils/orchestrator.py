@@ -77,6 +77,12 @@ def classify_intent(question: str, history: Optional[List[dict]] = None) -> Inte
         logger.info("   → Salutation détectée. Routage par défaut vers PDF (Conversation générale).")
         return "pdf"
         
+    # 1.5 Routage forcé vers l'agent staffing si des mots-clés spécifiques au staffing sont présents
+    staffing_keywords = ["employe", "employé", "employer", "collaborateur", "tjm", "salaire", "rentabilité", "rentable", "jours", "staffing"]
+    if any(sk in lower_q for sk in staffing_keywords):
+        logger.info("   → Mot-clé de staffing détecté dans la question. Routage forcé vers Staffing.")
+        return "staffing"
+
     # 2. Détection des requêtes générales sur le contenu du projet (plus flexible)
     general_keywords = [
         "contien", "contient", "document", "donnee", "donnée", "donne",
@@ -88,6 +94,18 @@ def classify_intent(question: str, history: Optional[List[dict]] = None) -> Inte
         if not any(emp_kw in lower_q for emp_kw in ["employe", "employé", "employer", "collaborateur", "qui", "nom", "salaire", "tjm"]):
             logger.info("   → Intention identifiée comme requête générale de métadonnées.")
             return "general"
+
+    # 3. Routage contextuel des demandes de diagrammes liées au staffing
+    chart_keywords = ["graphe", "graphique", "chart", "plot", "diagramme", "pie", "bar", "courbe", "visualiser"]
+    context_keywords = ["ce", "ces", "ca", "ça", "resultat", "résultat", "donnees", "données"]
+    if any(ck in lower_q for ck in chart_keywords) and any(cx in lower_q for cx in context_keywords) and history:
+        # Chercher la dernière question de l'utilisateur
+        for h in reversed(history):
+            if h.get("role") == "user":
+                last_q = h.get("content", "").lower()
+                if any(k in last_q for k in ["employe", "employé", "collaborateur", "tjm", "salaire", "rentabilité", "rentable", "jours", "staffing"]):
+                    logger.info("   → Demande de graphique sur le staffing détectée via le contexte historique.")
+                    return "staffing"
 
     history_context = ""
     if history:

@@ -58,6 +58,9 @@ RÈGLES DE RÉPONSE :
 7. NE génère JAMAIS de liens d'images Markdown (ex: `![Nom](url_image.png)`) ou de balises HTML d'images (`<img>`). Les graphiques sont gérés et injectés automatiquement par l'application, tu ne dois pas essayer de les dessiner en format texte ou markdown.
 8. Sois direct. Ne fais pas de longues introductions, réponds immédiatement à la question.
 9. NE fais JAMAIS de mentions ou d'hypothèses sur les couleurs des graphiques (ex: ne dis pas qu'un élément est rouge, vert, etc.) car le style visuel est géré dynamiquement par l'interface.
+10. Si la question demande d'identifier ou de désigner un collaborateur spécifique (ex: le plus rentable, le moins occupé, etc.), réponds directement en nommant ce collaborateur et en donnant ses chiffres clés. Ne liste pas tous les autres collaborateurs du projet sous forme de tableau ou de liste si ce n'est pas explicitement demandé.
+11. Évite absolument les répétitions et ne génère jamais de tableaux vides ou tronqués à la fin de ta réponse.
+12. NE MENTIONNE JAMAIS l'absence de fichiers Excel ou le fait que les données proviennent d'un fichier PDF ou RAG. Si tu as les données de staffing calculées ci-dessus, présente-les simplement comme les données du projet, sans mentionner des messages d'erreur passés ou des limites de format source.
 
 {history_section}
 
@@ -174,7 +177,11 @@ def run_staffing_agent(
         question, all_records
     ) if all_records else None)
 
-    if not employe_filter and not force_employe and history:
+    # Si l'utilisateur demande explicitement tous les collaborateurs, un bilan global ou complet, on n'hérite pas du filtre de l'historique
+    lower_q = question.lower()
+    is_global_request = any(kw in lower_q for kw in ["tous", "tout", "toute", "toutes", "chaque", "global", "général", "general", "complet", "liste"])
+
+    if not employe_filter and not force_employe and history and not is_global_request:
         for h in reversed(history[-6:]):
             if h.get("role") == "user":
                 employe_filter = _extract_employe_from_question(h.get("content", ""), all_records)
@@ -184,7 +191,7 @@ def run_staffing_agent(
 
     # ── 4. Détecter le projet dans la question ────────────────────
     projet_filter = _extract_projet_from_question(question, all_records) if all_records else None
-    if not projet_filter and history:
+    if not projet_filter and history and not is_global_request:
         for h in reversed(history[-6:]):
             if h.get("role") == "user":
                 projet_filter = _extract_projet_from_question(h.get("content", ""), all_records)
@@ -217,20 +224,52 @@ def run_staffing_agent(
     lower_q = question.lower()
     graph_keywords = ["graphe", "graphique", "chart", "plot", "barre", "courbe", "diagramme", "barchart", "piechart", "dessine", "représente", "visuelle", "visualiser", "char", "pie", "bar", "grap", "line"]
     if any(kw in lower_q for kw in graph_keywords):
-        charts = generate_staffing_charts(analysis, employe_filter, theme_mode=theme_mode)
+        # 1. Détection du nombre (limite du classement)
+        top_n = 5
+        match_n = re.search(r"\b(?:top|les|classement)\s*(\d+)\b", lower_q)
+        if match_n:
+            top_n = int(match_n.group(1))
+            
+        # 2. Détection de la métrique
+        metric = "gain"
+        if any(kw in lower_q for kw in ["coût", "cout", "cher", "depense", "dépense"]):
+            metric = "cost"
+        elif any(kw in lower_q for kw in ["occupé", "occupe", "travail", "jours", "activité", "activite"]):
+            metric = "days"
+            
+        # 3. Détection de l'ordre
+        order = "desc"
+        if any(kw in lower_q for kw in ["moins", "pire", "minimum", "min", "bas"]):
+            order = "asc"
+            
+        # 4. Détection du type de graphique
+        chart_type = "bar"
+        if any(kw in lower_q for kw in ["pie", "camembert", "tarte"]):
+            chart_type = "pie"
+            
+        charts = generate_staffing_charts(
+            analysis, 
+            employe_filter, 
+            theme_mode=theme_mode, 
+            top_n=top_n, 
+            metric=metric, 
+            order=order, 
+            chart_type=chart_type
+        )
         
         # Filtrage thématique précis pour ne renvoyer que les graphiques correspondants
         matched_charts = []
         
-        # 1. Rentabilité
-        if any(kw in lower_q for kw in ["rentabilité", "rentabilite", "gain", "perte", "bénéfice", "benefice", "rentable"]):
+        # 1. Rentabilité / Top employés / Classements
+        if any(kw in lower_q for kw in ["rentabilité", "rentabilite", "gain", "perte", "bénéfice", "benefice", "rentable", "top", "meilleur", "moins", "plus", "classement"]):
             if any(emp_kw in lower_q for emp_kw in ["employe", "employé", "employer", "collaborateur", "ressource", "chaque", "tous", "comparatif"]):
+                matched_charts.extend([c for c in charts if c.get("title") == "Classement des employés rentables"])
                 matched_charts.extend([c for c in charts if c.get("title") == "Taux de gain par employé"])
             else:
                 matched_charts.extend([c for c in charts if c.get("title") == "Rentabilité"])
             
         # 2. Répartition par projet
-        if any(kw in lower_q for kw in ["projet", "repartition", "répartition", "camembert", "pie"]):
+        if "projet" in lower_q or (any(kw in lower_q for kw in ["repartition", "répartition", "camembert", "pie"]) and not any(kw in lower_q for kw in ["employe", "employé", "employer", "collaborateur"])):
             matched_charts.extend([c for c in charts if c.get("title") == "Répartition par projet"])
             
         # 3. Salaire mensuel comparatif / TJM
@@ -250,6 +289,14 @@ def run_staffing_agent(
             # Supprimer les doublons tout en gardant l'ordre
             seen = set()
             charts = [c for c in matched_charts if c.get("title") not in seen and not seen.add(c.get("title"))]
+            
+            # Si l'utilisateur a spécifié un type de graphique particulier (ex: pie, bar, line), on filtre également par ce type
+            if "pie" in lower_q or "camembert" in lower_q:
+                charts = [c for c in charts if c.get("type") == "pie"]
+            elif "bar" in lower_q or "barre" in lower_q:
+                charts = [c for c in charts if c.get("type") == "bar"]
+            elif "line" in lower_q or "courbe" in lower_q:
+                charts = [c for c in charts if c.get("type") == "line"]
         else:
             # Fallback sur le type visuel si aucun filtre thématique précis n'a fonctionné
             if "pie" in lower_q or "camembert" in lower_q:

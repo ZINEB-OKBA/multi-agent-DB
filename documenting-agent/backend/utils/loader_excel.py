@@ -407,6 +407,7 @@ def run_excel_agent(question: str, dataframes: Dict[str, pd.DataFrame], history:
             "\n\nIMPORTANT : Puisque l'utilisateur demande explicitement un graphique, "
             "tu DOIS impérativement écrire du code Python pour tracer ce graphique (ex: bar, pie ou line chart) "
             "à l'aide de la bibliothèque Plotly Express (import plotly.express as px) et appeler fig.show() à la fin de ton code. "
+            "Tu dois impérativement filtrer le DataFrame pour ne représenter que ce que demande l'utilisateur (par exemple, si l'utilisateur demande le top 5 ou les 5 premiers, trie les données par la colonne appropriée et sélectionne uniquement les 5 premières lignes avant de tracer le graphique). Ne trace jamais l'intégralité du tableau si la question demande une sélection spécifique. "
             "Ne te contente pas d'écrire des tableaux ou du texte."
         )
     else:

@@ -177,6 +177,10 @@ def generate_staffing_charts(
     analysis: Dict[str, Any],
     employe_filter: Optional[str] = None,
     theme_mode: str = "light",
+    top_n: int = 5,
+    metric: str = "gain",
+    order: str = "desc",
+    chart_type: str = "bar",
 ) -> List[Dict[str, Any]]:
     """
     Retourne une liste de graphiques de staffing formatés avec le thème choisi.
@@ -217,6 +221,11 @@ def generate_staffing_charts(
     # 6. Taux de gain comparatif par employé
     if len(par_employe) > 1:
         c = _chart_rentabilite_employes(par_employe, rentabilite, theme_mode)
+        if c: charts.append(c)
+
+    # 7. Classement dynamique des employés (pie or bar chart)
+    if len(par_employe) > 1:
+        c = _chart_employee_ranking(par_employe, theme_mode, metric=metric, order=order, top_n=top_n, chart_type=chart_type)
         if c: charts.append(c)
 
     return charts
@@ -590,3 +599,101 @@ def _chart_rentabilite_employes(par_employe: Dict, rentabilite: Optional[Dict], 
     except Exception as e:
         logger.error(f"Erreur chart rentabilité employés : {e}")
         return None
+
+
+# ══════════════════════════════════════════════════════════════════
+# GRAPHIQUE 7 — Classement dynamique des employés (pie ou bar chart)
+# ══════════════════════════════════════════════════════════════════
+
+def _chart_employee_ranking(
+    par_employe: Dict,
+    theme_mode: str,
+    metric: str = "gain",
+    order: str = "desc",
+    top_n: int = 5,
+    chart_type: str = "bar"
+) -> Optional[Dict]:
+    try:
+        rows = []
+        for emp, data in par_employe.items():
+            total_ca = sum(m.get("ca", 0.0) for m in data.get("mois_detail", []))
+            total_cout = data.get("total_cout", 0.0)
+            gain_net = total_ca - total_cout
+            total_jours = data.get("total_jours", 0.0)
+            rows.append({
+                "Employé": emp,
+                "Gain Net (Dhs)": gain_net,
+                "Coût (Dhs)": total_cout,
+                "Jours travaillés": total_jours
+            })
+        if not rows:
+            return None
+        
+        df_emp = pd.DataFrame(rows)
+        
+        # Sélection de la colonne selon la métrique demandée
+        if metric == "cost":
+            col = "Coût (Dhs)"
+            metric_label = "coût total"
+        elif metric == "days":
+            col = "Jours travaillés"
+            metric_label = "jours travaillés"
+        else:
+            col = "Gain Net (Dhs)"
+            metric_label = "gain net"
+
+        ascending = (order == "asc")
+        order_label = "Moins" if ascending else "Plus"
+        
+        # Tri et limitation
+        df_sorted = df_emp.sort_values(by=col, ascending=ascending).head(top_n)
+        title = f"{order_label} {top_n} des employés par {metric_label}"
+
+        # Génération du graphique Plotly
+        if chart_type == "pie":
+            df_pie = df_sorted.copy()
+            if col == "Gain Net (Dhs)":
+                df_pie[col] = df_pie[col].apply(lambda x: x if x > 0 else 0.0)
+            fig = px.pie(
+                df_pie,
+                names="Employé",
+                values=col,
+                title=f"🏆 {title}",
+                template="plotly_white"
+            )
+        else:
+            fig = px.bar(
+                df_sorted,
+                x="Employé",
+                y=col,
+                title=f"🏆 {title}",
+                template="plotly_white",
+                color="Employé"
+            )
+
+        apply_premium_layout(fig, theme_mode, chart_type)
+        b64 = _plotly_to_base64(fig, width=600, height=500)
+
+        palette = ["#27AE60", "#2ECC71", "#3498DB", "#9B59B6", "#F1C40F", "#E67E22", "#E74C3C", "#1ABC9C", "#2C3E50", "#7F8C8D"]
+        labels = list(df_sorted["Employé"])
+        values = list(df_sorted[col])
+
+        return {
+            "title": "Classement des employés rentables",
+            "type": chart_type,
+            "base64": b64,
+            "plotly": decode_plotly_bdata(json.loads(pio.to_json(fig))),
+            "chartjs": {
+                "type": chart_type,
+                "data": {
+                    "labels": labels,
+                    "datasets": [{
+                        "data": values,
+                        "backgroundColor": palette[:len(labels)]
+                    }]
+                }
+            }
+        }
+    except Exception as e:
+        logger.error(f"Erreur chart employee ranking : {e}")
+        return None
