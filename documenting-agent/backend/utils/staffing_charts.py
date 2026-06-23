@@ -225,7 +225,8 @@ def generate_staffing_charts(
 
     # 7. Classement dynamique des employés (pie or bar chart)
     if len(par_employe) > 1:
-        c = _chart_employee_ranking(par_employe, theme_mode, metric=metric, order=order, top_n=top_n, chart_type=chart_type)
+        is_comparison = employe_filter is not None
+        c = _chart_employee_ranking(par_employe, theme_mode, metric=metric, order=order, top_n=top_n, chart_type=chart_type, is_comparison=is_comparison)
         if c: charts.append(c)
 
     return charts
@@ -611,7 +612,8 @@ def _chart_employee_ranking(
     metric: str = "gain",
     order: str = "desc",
     top_n: int = 5,
-    chart_type: str = "bar"
+    chart_type: str = "bar",
+    is_comparison: bool = False
 ) -> Optional[Dict]:
     try:
         rows = []
@@ -647,7 +649,19 @@ def _chart_employee_ranking(
         
         # Tri et limitation
         df_sorted = df_emp.sort_values(by=col, ascending=ascending).head(top_n)
-        title = f"{order_label} {top_n} des employés par {metric_label}"
+        actual_n = len(df_sorted)
+        
+        if is_comparison:
+            title = f"Comparatif des employés par {metric_label}"
+            card_title = "Comparatif des employés"
+        else:
+            title = f"{order_label} {actual_n} des employés par {metric_label}"
+            if metric == "cost":
+                card_title = f"Classement des employés par coût"
+            elif metric == "days":
+                card_title = f"Classement des employés par activité"
+            else:
+                card_title = "Classement des employés rentables"
 
         # Génération du graphique Plotly
         if chart_type == "pie":
@@ -679,7 +693,7 @@ def _chart_employee_ranking(
         values = list(df_sorted[col])
 
         return {
-            "title": "Classement des employés rentables",
+            "title": card_title,
             "type": chart_type,
             "base64": b64,
             "plotly": decode_plotly_bdata(json.loads(pio.to_json(fig))),
@@ -690,7 +704,7 @@ def _chart_employee_ranking(
                     "datasets": [{
                         "data": values,
                         "backgroundColor": palette[:len(labels)]
-                    }]
+                     }]
                 }
             }
         }

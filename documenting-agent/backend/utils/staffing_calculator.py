@@ -59,13 +59,24 @@ def compute_staffing_analysis(
 
     # Filtrage par employé si demandé
     if employe_filter:
-        mask = df["employe"].str.lower().str.contains(employe_filter.lower(), regex=False, na=False)
-        df = df[mask]
-        if df.empty:
-            return {
-                "erreur": f"Employé '{employe_filter}' introuvable dans les données.",
-                "dataframe": pd.DataFrame()
-            }
+        if isinstance(employe_filter, list):
+            mask = pd.Series(False, index=df.index)
+            for emp_f in employe_filter:
+                mask |= df["employe"].str.lower().str.contains(emp_f.lower(), regex=False, na=False)
+            df = df[mask]
+            if df.empty:
+                return {
+                    "erreur": f"Employés {employe_filter} introuvables dans les données.",
+                    "dataframe": pd.DataFrame()
+                }
+        else:
+            mask = df["employe"].str.lower().str.contains(employe_filter.lower(), regex=False, na=False)
+            df = df[mask]
+            if df.empty:
+                return {
+                    "erreur": f"Employé '{employe_filter}' introuvable dans les données.",
+                    "dataframe": pd.DataFrame()
+                }
 
     # Filtrage par projet si demandé
     if projet_filter:
@@ -245,15 +256,15 @@ def _build_synthese(
         has_budgets = any(any(m.get("ca", 0) > 0 for m in data.get("mois_detail", [])) for data in par_employe.values())
         if has_budgets:
             lines.append(f"## Synthèse globale de staffing et rentabilité par employé — {len(par_employe)} employé(s) (Année(s) : {annees_str})")
-            lines.append("\n| Employé | Jours travaillés | Coût calculé | CA généré | Gain net | Taux de gain | Projets |")
-            lines.append("| :--- | :--- | :--- | :--- | :--- | :--- | :--- |")
+            lines.append("\n| Employé | Jours travaillés | Salaire mensuel | Coût calculé | CA généré | Gain net | Taux de gain | Projets |")
+            lines.append("| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |")
             for emp, data in par_employe.items():
                 total_ca = sum(m.get("ca", 0.0) for m in data.get("mois_detail", []))
                 total_cout = data["total_cout"]
                 gain_net = total_ca - total_cout
                 marge_pct = (gain_net / total_ca * 100) if total_ca > 0 else 0.0
                 lines.append(
-                    f"| **{emp}** | {data['total_jours']}j ({data['nb_mois']} mois) | {total_cout:,.2f} Dhs | {total_ca:,.2f} Dhs | {gain_net:+,.2f} Dhs | {marge_pct:.1f}% | {', '.join(data['projets'])} |"
+                    f"| **{emp}** | {data['total_jours']}j ({data['nb_mois']} mois) | {data['salaire_moyen']:,.2f} Dhs/mois | {total_cout:,.2f} Dhs | {total_ca:,.2f} Dhs | {gain_net:+,.2f} Dhs | {marge_pct:.1f}% | {', '.join(data['projets'])} |"
                 )
         else:
             lines.append(f"## Synthèse globale de staffing — {len(par_employe)} employé(s) (Année(s) : {annees_str})")

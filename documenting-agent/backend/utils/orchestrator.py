@@ -73,7 +73,9 @@ def classify_intent(question: str, history: Optional[List[dict]] = None) -> Inte
     lower_q = question.lower()
     
     # 1. Gestion des salutations directes pour éviter de déranger les agents de calculs
-    if any(greet in lower_q for greet in ["bonjour", "salut", "hello", "hi", "bonsoir", "hey"]):
+    salutations = ["bonjour", "salut", "hello", "hi", "bonsoir", "hey"]
+    words = re.findall(r"\b[a-z\u00c0-\u00ff]+\b", lower_q)
+    if any(greet in words for greet in salutations):
         logger.info("   → Salutation détectée. Routage par défaut vers PDF (Conversation générale).")
         return "pdf"
         
