@@ -107,8 +107,18 @@ def generate_plotly_json(
             template="plotly_white",
             markers=True
         )
+    elif chart_type == "radar":
+        fig = px.line_polar(
+            df_result,
+            r=y_col,
+            theta=x_col,
+            line_close=True,
+            color_discrete_sequence=color_palette,
+            template="plotly_white"
+        )
+        fig.update_traces(fill='toself')
     else:
-        raise ValueError(f"Type de graphique '{chart_type}' non supporté. Choisissez parmi 'bar', 'pie' ou 'line'.")
+        raise ValueError(f"Type de graphique '{chart_type}' non supporté. Choisissez parmi 'bar', 'pie', 'line' ou 'radar'.")
 
     # 3. Application du style premium & thème
     apply_premium_layout(fig, theme_mode, chart_type)
@@ -167,6 +177,21 @@ def apply_premium_layout(fig, theme_mode: str, chart_type: str):
         )
     elif chart_type == "pie":
         fig.update_traces(hole=0.4, textinfo="percent+label")
+    elif chart_type == "radar":
+        fig.update_polars(
+            bgcolor=plot_bg_color,
+            angularaxis=dict(
+                tickfont=dict(color=font_color),
+                linecolor=grid_color
+            ),
+            radialaxis=dict(
+                visible=True,
+                showline=True,
+                gridcolor=grid_color,
+                linecolor=grid_color,
+                tickfont=dict(color=font_color)
+            )
+        )
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -204,14 +229,16 @@ def generate_staffing_charts(
     c = _chart_cout_mensuel(par_mois, theme_mode)
     if c: charts.append(c)
 
-    # 3. Répartition par projet (camembert)
-    c = _chart_repartition_projets(par_projet, theme_mode)
+    # 3. Répartition par projet (camembert ou barres)
+    c = _chart_repartition_projets(par_projet, theme_mode, chart_type=chart_type)
     if c: charts.append(c)
 
-    # 4. TJM comparatif entre employés
+    # 4. CJM comparatif entre employés
     if len(par_employe) > 1:
-        c = _chart_tjm_comparatif(par_employe, theme_mode)
+        c = _chart_cjm_comparatif(par_employe, theme_mode, chart_type=chart_type, top_n=top_n, order=order)
         if c: charts.append(c)
+        c2 = _chart_salaire_comparatif(par_employe, theme_mode, chart_type=chart_type, top_n=top_n, order=order)
+        if c2: charts.append(c2)
 
     # 5. Rentabilité gain/perte
     if rentabilite:
@@ -227,6 +254,11 @@ def generate_staffing_charts(
     if len(par_employe) > 1:
         is_comparison = employe_filter is not None
         c = _chart_employee_ranking(par_employe, theme_mode, metric=metric, order=order, top_n=top_n, chart_type=chart_type, is_comparison=is_comparison)
+        if c: charts.append(c)
+
+    # 8. Profil radar comparatif multi-dimensionnel des employés
+    if len(par_employe) > 1 and chart_type == "radar":
+        c = _chart_radar_profil(par_employe, theme_mode)
         if c: charts.append(c)
 
     return charts
@@ -360,7 +392,7 @@ def _chart_cout_mensuel(par_mois: Dict, theme_mode: str) -> Optional[Dict]:
 # GRAPHIQUE 3 — Répartition coût par projet (camembert)
 # ══════════════════════════════════════════════════════════════════
 
-def _chart_repartition_projets(par_projet: Dict, theme_mode: str) -> Optional[Dict]:
+def _chart_repartition_projets(par_projet: Dict, theme_mode: str, chart_type: str = "pie") -> Optional[Dict]:
     if len(par_projet) < 2:
         return None
     try:
@@ -368,28 +400,49 @@ def _chart_repartition_projets(par_projet: Dict, theme_mode: str) -> Optional[Di
         values = [par_projet[p]["total_cout"] for p in labels]
         df_proj = pd.DataFrame({"Projet": labels, "Coût": values})
 
-        fig = px.pie(
-            df_proj,
-            names="Projet",
-            values="Coût",
-            title="🗂️ Répartition du coût par projet",
-            template="plotly_white"
-        )
+        if chart_type == "bar":
+            fig = px.bar(
+                df_proj,
+                x="Projet",
+                y="Coût",
+                color="Projet",
+                title="🗂️ Répartition du coût par projet",
+                template="plotly_white"
+            )
+        elif chart_type == "radar":
+            fig = px.line_polar(
+                df_proj,
+                r="Coût",
+                theta="Projet",
+                line_close=True,
+                title="🗂️ Répartition du coût par projet (Radar)",
+                template="plotly_white"
+            )
+            fig.update_traces(fill='toself')
+        else:
+            fig = px.pie(
+                df_proj,
+                names="Projet",
+                values="Coût",
+                title="🗂️ Répartition du coût par projet",
+                template="plotly_white"
+            )
 
-        apply_premium_layout(fig, theme_mode, "pie")
+        apply_premium_layout(fig, theme_mode, chart_type)
         b64 = _plotly_to_base64(fig, width=600, height=500)
 
         palette = ["#534AB7","#27AE60","#E67E22","#E74C3C","#3498DB","#9B59B6","#1ABC9C"]
         return {
             "title":  "Répartition par projet",
-            "type":   "pie",
+            "type":   chart_type,
             "base64": b64,
             "plotly": decode_plotly_bdata(json.loads(pio.to_json(fig))),
             "chartjs": {
-                "type": "pie",
+                "type": chart_type,
                 "data": {
                     "labels": labels,
                     "datasets": [{
+                        "label": "Coût (Dhs)" if chart_type == "bar" else "",
                         "data": values,
                         "backgroundColor": palette[:len(labels)]
                     }]
@@ -402,48 +455,154 @@ def _chart_repartition_projets(par_projet: Dict, theme_mode: str) -> Optional[Di
 
 
 # ══════════════════════════════════════════════════════════════════
-# GRAPHIQUE 4 — TJM comparatif
+# GRAPHIQUE 4 — CJM comparatif
 # ══════════════════════════════════════════════════════════════════
 
-def _chart_tjm_comparatif(par_employe: Dict, theme_mode: str) -> Optional[Dict]:
+def _chart_cjm_comparatif(par_employe: Dict, theme_mode: str, chart_type: str = "bar", top_n: Optional[int] = None, order: str = "desc") -> Optional[Dict]:
     try:
-        emps = list(par_employe.keys())
-        tjms = [par_employe[e].get("salaire_moyen", par_employe[e]["tjm_moyen"]) for e in emps]
-        df_tjm = pd.DataFrame({"Employé": emps, "Salaire": tjms})
+        rows = []
+        for e in par_employe:
+            rows.append({"Employé": e, "CJM": par_employe[e]["tjm_moyen"]})
+        df_cjm = pd.DataFrame(rows)
 
-        fig = px.bar(
-            df_tjm,
-            x="Salaire",
-            y="Employé",
-            orientation="h",
-            title="💼 Salaire mensuel comparatif par employé",
-            labels={"Salaire": "Salaire mensuel (Dhs/mois)", "Employé": "Employé"},
-            template="plotly_white"
-        )
-        fig.update_traces(marker_color="#534AB7")
+        if top_n is not None:
+            ascending = (order == "asc")
+            df_cjm = df_cjm.sort_values(by="CJM", ascending=ascending).head(top_n)
 
-        apply_premium_layout(fig, theme_mode, "bar")
+        emps = list(df_cjm["Employé"])
+        tjms = list(df_cjm["CJM"])
+
+        actual_n = len(df_cjm)
+        total_n = len(par_employe)
+        title_suffix = f" (Top {actual_n})" if actual_n < total_n else ""
+
+        if chart_type == "pie":
+            fig = px.pie(
+                df_cjm,
+                names="Employé",
+                values="CJM",
+                title=f"💼 Répartition du Coût Journalier Moyen (CJM){title_suffix} par employé",
+                template="plotly_white"
+            )
+        elif chart_type == "radar":
+            fig = px.line_polar(
+                df_cjm,
+                r="CJM",
+                theta="Employé",
+                line_close=True,
+                title=f"💼 Coût Journalier Moyen (CJM) comparatif{title_suffix} par employé (Radar)",
+                template="plotly_white"
+            )
+            fig.update_traces(fill='toself')
+        else:
+            fig = px.bar(
+                df_cjm,
+                x="CJM",
+                y="Employé",
+                orientation="h",
+                title=f"💼 Coût Journalier Moyen (CJM) comparatif{title_suffix} par employé",
+                labels={"CJM": "CJM (Dhs/jour)", "Employé": "Employé"},
+                template="plotly_white"
+            )
+            fig.update_traces(marker_color="#3B82F6")
+
+        apply_premium_layout(fig, theme_mode, chart_type)
         b64 = _plotly_to_base64(fig, width=800, height=400)
 
+        palette = ["#3B82F6", "#2563EB", "#1D4ED8", "#1E40AF", "#1E3A8A", "#60A5FA", "#93C5FD", "#BFDBFE"]
         return {
-            "title":  "Salaire mensuel comparatif",
-            "type":   "bar",
+            "title":  "CJM comparatif",
+            "type":   chart_type,
             "base64": b64,
             "plotly": decode_plotly_bdata(json.loads(pio.to_json(fig))),
             "chartjs": {
-                "type": "bar",
+                "type": chart_type,
                 "data": {
                     "labels": emps,
                     "datasets": [{
-                        "label": "Salaire mensuel (Dhs/mois)",
+                        "label": "CJM (Dhs/jour)",
                         "data": tjms,
-                        "backgroundColor": "#534AB7",
+                        "backgroundColor": palette[:len(emps)] if chart_type == "pie" else "#3B82F6",
                     }]
                 }
             }
         }
     except Exception as e:
-        logger.error(f"Erreur chart TJM : {e}")
+        logger.error(f"Erreur chart CJM : {e}")
+        return None
+
+
+def _chart_salaire_comparatif(par_employe: Dict, theme_mode: str, chart_type: str = "bar", top_n: Optional[int] = None, order: str = "desc") -> Optional[Dict]:
+    try:
+        rows = []
+        for e in par_employe:
+            rows.append({"Employé": e, "Salaire": par_employe[e]["salaire_moyen"]})
+        df_sal = pd.DataFrame(rows)
+
+        if top_n is not None:
+            ascending = (order == "asc")
+            df_sal = df_sal.sort_values(by="Salaire", ascending=ascending).head(top_n)
+
+        emps = list(df_sal["Employé"])
+        salaires = list(df_sal["Salaire"])
+
+        actual_n = len(df_sal)
+        total_n = len(par_employe)
+        title_suffix = f" (Top {actual_n})" if actual_n < total_n else ""
+
+        if chart_type == "pie":
+            fig = px.pie(
+                df_sal,
+                names="Employé",
+                values="Salaire",
+                title=f"💼 Répartition des salaires mensuels{title_suffix} par employé",
+                template="plotly_white"
+            )
+        elif chart_type == "radar":
+            fig = px.line_polar(
+                df_sal,
+                r="Salaire",
+                theta="Employé",
+                line_close=True,
+                title=f"💼 Salaire mensuel comparatif{title_suffix} par employé (Radar)",
+                template="plotly_white"
+            )
+            fig.update_traces(fill='toself')
+        else:
+            fig = px.bar(
+                df_sal,
+                x="Salaire",
+                y="Employé",
+                orientation="h",
+                title=f"💼 Salaire mensuel comparatif{title_suffix} par employé",
+                labels={"Salaire": "Salaire mensuel (Dhs/mois)", "Employé": "Employé"},
+                template="plotly_white"
+            )
+            fig.update_traces(marker_color="#534AB7")
+
+        apply_premium_layout(fig, theme_mode, chart_type)
+        b64 = _plotly_to_base64(fig, width=800, height=400)
+
+        palette = ["#534AB7", "#6D28D9", "#7C3AED", "#8B5CF6", "#A78BFA", "#C4B5FD", "#DDD6FE", "#EDE9FE"]
+        return {
+            "title":  "Salaire mensuel comparatif",
+            "type":   chart_type,
+            "base64": b64,
+            "plotly": decode_plotly_bdata(json.loads(pio.to_json(fig))),
+            "chartjs": {
+                "type": chart_type,
+                "data": {
+                    "labels": emps,
+                    "datasets": [{
+                        "label": "Salaire mensuel (Dhs/mois)",
+                        "data": salaires,
+                        "backgroundColor": palette[:len(emps)] if chart_type == "pie" else "#534AB7",
+                    }]
+                }
+            }
+        }
+    except Exception as e:
+        logger.error(f"Erreur chart Salaire : {e}")
         return None
 
 
@@ -675,6 +834,16 @@ def _chart_employee_ranking(
                 title=f"🏆 {title}",
                 template="plotly_white"
             )
+        elif chart_type == "radar":
+            fig = px.line_polar(
+                df_sorted,
+                r=col,
+                theta="Employé",
+                line_close=True,
+                title=f"🏆 {title} (Radar)",
+                template="plotly_white"
+            )
+            fig.update_traces(fill='toself')
         else:
             fig = px.bar(
                 df_sorted,
@@ -710,4 +879,116 @@ def _chart_employee_ranking(
         }
     except Exception as e:
         logger.error(f"Erreur chart employee ranking : {e}")
+        return None
+
+
+# ══════════════════════════════════════════════════════════════════
+# GRAPHIQUE 8 — Profil radar comparatif multi-dimensionnel des employés
+# ══════════════════════════════════════════════════════════════════
+
+def _chart_radar_profil(par_employe: Dict, theme_mode: str) -> Optional[Dict]:
+    try:
+        categories = ["Jours travaillés", "Coût (k)", "Taux occupation", "Gain net (k)", "Nb projets"]
+        
+        # 1. Extraire les valeurs brutes et filtrer les actifs
+        raw = {}
+        for emp, data in par_employe.items():
+            total_j = data.get("total_jours", 0.0)
+            if total_j <= 0.0:
+                continue
+            
+            total_cout = data.get("total_cout", 0.0)
+            nb_projets = len(data.get("projets", []))
+            total_ca = sum(m.get("ca", 0.0) for m in data.get("mois_detail", []))
+            gain_net = total_ca - total_cout
+            nb_mois = max(data.get("nb_mois", 1), 1)
+            taux_occ = min(total_j / (nb_mois * 21.0) * 100, 100.0)
+            
+            raw[emp] = [
+                total_j / nb_mois,
+                (total_cout / nb_mois) / 1000.0,
+                taux_occ,
+                (gain_net / nb_mois) / 1000.0,
+                nb_projets
+            ]
+            
+        if not raw:
+            return None
+            
+        # 2. Normalisation 0-100 par axe
+        maxes = [max(raw[e][i] for e in raw) or 1.0 for i in range(5)]
+        
+        rows = []
+        for emp, vals in raw.items():
+            normed = [round(v / mx * 100.0, 1) for v, mx in zip(vals, maxes)]
+            for cat, val in zip(categories, normed):
+                rows.append({
+                    "Employé": emp,
+                    "Métrique": cat,
+                    "Valeur": val
+                })
+                
+        df_radar = pd.DataFrame(rows)
+        
+        fig = px.line_polar(
+            df_radar,
+            r="Valeur",
+            theta="Métrique",
+            color="Employé",
+            line_close=True,
+            title="🕸️ Profil comparatif des employés (radar)",
+            template="plotly_white"
+        )
+        fig.update_traces(fill='toself')
+        
+        # Appliquer d'abord le layout premium général
+        apply_premium_layout(fig, theme_mode, "radar")
+        
+        # Surcharger ensuite les options spécifiques pour le radar
+        is_dark = theme_mode.lower() == "dark"
+        fig.update_layout(
+            polar=dict(
+                bgcolor="#1E1E1E" if is_dark else "#F8F9FA",
+                radialaxis=dict(visible=True, range=[0, 100],
+                                color="#F3F4F6" if is_dark else "#1F2937"),
+                angularaxis=dict(color="#F3F4F6" if is_dark else "#1F2937"),
+            ),
+            legend=dict(
+                orientation="v",
+                yanchor="middle", y=0.5,
+                xanchor="left", x=1.05,
+                font=dict(size=10)
+            ),
+            margin=dict(l=80, r=220, t=60, b=60)
+        )
+        b64 = _plotly_to_base64(fig, width=950, height=600)
+        
+        # Extraction des séries pour chartjs fallback
+        labels_chartjs = categories
+        datasets = []
+        palette = ["#534AB7", "#27AE60", "#E67E22", "#E74C3C", "#3498DB", "#9B59B6", "#1ABC9C"]
+        for i, emp in enumerate(df_radar["Employé"].unique()):
+            emp_rows = df_radar[df_radar["Employé"] == emp]
+            datasets.append({
+                "label": emp,
+                "data": [r["Valeur"] for _, r in emp_rows.iterrows()],
+                "backgroundColor": palette[i % len(palette)] + "33", # Semi-transparent fill
+                "borderColor": palette[i % len(palette)]
+            })
+            
+        return {
+            "title": "Profil radar employés",
+            "type": "radar",
+            "base64": b64,
+            "plotly": decode_plotly_bdata(json.loads(pio.to_json(fig))),
+            "chartjs": {
+                "type": "radar",
+                "data": {
+                    "labels": labels_chartjs,
+                    "datasets": datasets
+                }
+            }
+        }
+    except Exception as e:
+        logger.error(f"Erreur chart radar profil : {e}")
         return None

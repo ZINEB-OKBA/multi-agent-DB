@@ -308,6 +308,7 @@
     "MENU": {
       "DASHBOARD": "Dashboard",
       "DATA_BASE": "Database",
+      "STAFFING": "Staffing",
       "TICKET": "Ticket",
       "TICKET_MANAGEMENT": "Ticket management",
       "PROJECTS": "Projects",

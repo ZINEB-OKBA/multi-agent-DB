@@ -10,6 +10,7 @@ POST /api/staffing/chat
   → Retourne answer + charts + sources
 """
 import logging
+import os
 import re
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -23,10 +24,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Staffing"])
 
 # ⚙️ Paramètres d'accès PostgreSQL (alignés sur l'orchestrateur)
-DB_HOST = "localhost"
-DB_NAME = "Motuldb"
-DB_USER = "postgres"
-DB_PASSWORD = "postgres"
+DB_HOST = os.getenv("DB_HOST", "")
+DB_NAME = os.getenv("DB_NAME", "")
+DB_USER = os.getenv("DB_USER", "")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 
 
 # ══════════════════════════════════════════════════════════════════

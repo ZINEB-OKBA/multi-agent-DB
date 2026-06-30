@@ -23,7 +23,7 @@ from typing import List, Dict, Any, Optional, Tuple
 
 import pandas as pd
 
-from utils.staffing_extractor  import extract_from_dataframe, extract_from_pdf_bytes
+from utils.staffing_extractor  import extract_from_dataframe, extract_from_multiple_dataframes, extract_from_pdf_bytes
 from utils.staffing_calculator import compute_staffing_analysis
 from utils.staffing_charts     import generate_staffing_charts
 from utils.llm_factory          import get_llm
@@ -64,6 +64,20 @@ RÈGLES DE RÉPONSE :
 13. N'essaie jamais de dessiner, simuler ou représenter le graphique demandé sous forme de tableau texte ou markdown. Contente-toi de faire l'analyse en texte. L'application se charge déjà d'afficher le graphique visuel à part. Ta réponse ne doit contenir aucun placeholder ou introduction de graphique comme "Graphique :" ou "Voici le graphique :" suivis d'un tableau répété.
 14. Si plusieurs collaborateurs portent le même prénom ou nom de base dans les données (ex: "Zakaria (ID: 8)" et "Zakaria (ID: 11)") et que l'utilisateur pose une question générale ou sur ce nom, tu ne dois JAMAIS les regrouper ou sommer leurs chiffres. Tu dois impérativement les traiter comme deux personnes distinctes et afficher toujours leur ID complet (ex: "Zakaria (ID: 8)" et "Zakaria (ID: 11)") pour éviter toute confusion.
 15. Lorsque tu compares des valeurs numériques (par exemple pour déterminer quel projet ou employé a un gain net, coût, budget ou salaire plus élevé), fais extrêmement attention à l'ordre de grandeur des chiffres. Par exemple, 13 142 Dhs est supérieur à 3 714 Dhs. Vérifie toujours tes affirmations comparatives avant de répondre.
+16. Si l'utilisateur demande un graphique ou un pourcentage de répartition, ne fais aucun calcul de pourcentage toi-même dans le texte. Indique simplement que le graphique en forme de tarte (pie chart) généré ci-dessous montre la répartition.
+17. ATTENTION ORTHOGRAPHE : L'utilisateur peut écrire "employer" au lieu de "employé". Dans le contexte de l'application, "employer" ou "employeur" désigne TOUJOURS un "employé" (le collaborateur, la ressource) et non pas un projet ou un client. Ne fais jamais de regroupement par projet/client si l'utilisateur demande "par employer".
+18. CJM ET INFOS CIBLÉES : CJM signifie "Coût Journalier Moyen" (et non pas "Temps de Travail Moyen"). Si l'utilisateur demande une métrique précise (ex: uniquement le CJM, uniquement le salaire, ou uniquement les jours travaillés), n'affiche jamais le tableau global de synthèse avec toutes les autres colonnes. Génère à la place un tableau restreint avec uniquement le nom de l'employé et la métrique spécifiquement demandée (ex: "Employé" et "Coût Journalier Moyen (CJM)").
+19. CALCUL DE LA RENTABILITÉ / MARGE : La formule financière standard de la marge de rentabilité est toujours : Marge = Gain Net / Chiffre d'Affaires (CA). Ne divise JAMAIS le Gain Net par le Coût pour calculer la marge ou la rentabilité. Si le gain net est de 35 285,72 Dhs et le CA généré est de 60 000,00 Dhs, la rentabilité est de 58.8% (35 285.72 / 60 000.00), et non pas 146%.
+20. DEVISE ET MONNAIE : Toutes les valeurs financières (salaires, coûts, budgets, gains, etc.) doivent obligatoirement être exprimées en Dirhams (écrire "Dh" ou "Dhs"). Il est strictement interdit d'utiliser le symbole de l'Euro (€) ou du Dollar ($).
+21. RETOUR SUR INVESTISSEMENT (ROI) GLOBAL : Le ROI global d'un projet se calcule TOUJOURS par la formule : ROI = Gain Net Global / Coût Total. Pour le projet Motul, le budget/CA total est de 20 000,00 Dhs et le coût total est de 20 952,38 Dhs, soit un Gain Net de -952,38 Dhs et un ROI de -4.5%. Pour le projet CT, le budget/CA total est de 60 000,00 Dhs et le coût total est de 24 714,28 Dhs, soit un Gain Net de +35 285,72 Dhs et un ROI de 142.8%. Ne confonds pas le ROI global (divisé par le Coût) avec la Marge de rentabilité (divisée par le CA). Présente toujours ces calculs globaux et exacts au niveau du projet si l'utilisateur demande le ROI ou le gain global du projet.
+22. INTERDICTION DE FAIRE DES CALCULS MANUELS : Il est strictement interdit d'effectuer des calculs mathématiques (comme des additions, soustractions, divisions pour trouver le ROI, le gain net total ou le taux de marge) par toi-même. Utilise UNIQUEMENT et STRICTEMENT les valeurs pré-calculées fournies dans la section "DONNÉES DE STAFFING CALCULÉES" (notamment les colonnes Gain net, Marge de rentabilité, et Retour sur investissement (ROI) du tableau "Synthèse par Projet"). Ne fais aucun arrondi ou recalcul manuel.
+23. QUESTIONS SIMPLES / DE COMPTAGE / LISTES : Si l'utilisateur pose une question de comptage simple (ex: "combien d'employés...", "combien de projets...") ou une question de liste simple (ex: "liste des collaborateurs", "quels employés ont démarré en 2018 ?", "l'employé qui a démarré à telle date..."), tu dois répondre directement et uniquement par une phrase concise ou une liste à puces claire avec l'information demandée (ex: "Il existe 25 employés dans les données."). Il est STRICTEMENT INTERDIT d'afficher de grands tableaux financiers (contenant des colonnes de coûts calculés, CJM, CA, gain net, etc.) ou la synthèse par projet lorsque la question ne le demande pas.
+24. INTERDICTION D'UTILISER LE TERME "TJM" : Il est strictement interdit d'utiliser le terme "TJM" (Taux Journalier Moyen) ou d'en faire référence dans tes réponses pour parler des collaborateurs. Utilise uniquement et exclusivement le terme "CJM" (Coût Journalier Moyen) pour désigner le coût ou tarif journalier d'un employé.
+25. PRIORITÉ AUX NOUVELLES DONNÉES SUR L'HISTORIQUE : Si la section HISTORIQUE DES ÉCHANGES RÉCENTS ci-dessous contient des réponses ou des chiffres qui diffèrent des "DONNÉES DE STAFFING CALCULÉES" fournies ci-dessus (par exemple en raison d'un changement de fichier Excel ou de base de données), tu dois IMPÉRATIVEMENT ignorer les chiffres de l'historique et utiliser uniquement les chiffres de la section "DONNÉES DE STAFFING CALCULÉES". Les données de la section "DONNÉES DE STAFFING CALCULÉES" écrasent toute ancienne conversation.
+26. MOIS ABSENTS DANS LE DÉTAIL : Si un mois spécifique demandé par l'utilisateur (ex: janvier) n'apparaît pas dans la table "Détail mensuel" de l'employé, cela signifie obligatoirement que l'employé a travaillé 0 jour (aucune imputation) ce mois-là. Réponds avec "0 jour" pour ce mois absent.
+27. EXPLICATION DU DÉTAIL DES CALCULS : Si l'utilisateur demande comment un chiffre a été obtenu ou s'il demande le "détail du calcul" (notamment pour le coût total, le gain net, le ROI ou la marge d'un projet ou d'un collaborateur), tu dois obligatoirement détailler chaque étape du calcul par une formule simple et claire (ex: "Gain Net = CA du projet (903 200,00 Dhs) - Coût total cumulé de tous les collaborateurs (109 685,66 Dhs) = 793 514,34 Dhs"). Affiche toujours ces calculs intermédiaires.
+28. DISTINCTION COLLABORATEUR VS PROJET GLOBAL : Si la question porte sur un collaborateur spécifique (ex: Anass Naji) et sa rentabilité sur un projet, fais extrêmement attention à ne pas mélanger son coût individuel (ex: 23 785,65 Dhs) avec le coût total cumulé de tous les collaborateurs sur ce projet (ex: 109 685,66 Dhs). Explique clairement que le gain net et le ROI globaux du projet sont calculés sur la base du coût total de tous les collaborateurs travaillant sur le projet, et non sur le seul coût de ce collaborateur individuel. Affiche toujours le coût total cumulé du projet à côté pour que l'utilisateur comprenne la logique de calcul.
+
 
 {history_section}
 
@@ -108,6 +122,9 @@ def run_staffing_agent(
     all_records: List[Dict[str, Any]] = []
     sources_used: List[Dict[str, Any]] = []
 
+    dfs_to_extract = []
+    excel_csv_files = []
+
     for doc in docs_raw:
         file_name  = doc.get("file_name", "fichier")
         file_bytes = doc.get("file_bytes", b"")
@@ -121,35 +138,52 @@ def run_staffing_agent(
                     tmp_path = tmp.name
                 if suffix == ".csv":
                     df = pd.read_csv(tmp_path)
+                    dfs_to_extract.append(df)
                 else:
-                    df = pd.read_excel(tmp_path)
+                    sheet_dict = pd.read_excel(tmp_path, sheet_name=None)
+                    for sheet_name, df in sheet_dict.items():
+                        logger.info(f"Fiche Excel '{file_name}' - feuille '{sheet_name}' chargée (shape: {df.shape})")
+                        dfs_to_extract.append(df)
                 os.unlink(tmp_path)
-
-                records = extract_from_dataframe(df)
+                excel_csv_files.append(file_name)
 
             elif suffix in (".pdf", ".doc", ".docx"):
                 records = extract_from_pdf_bytes(file_bytes, file_name)
+                if records:
+                    all_records.extend(records)
+                    sources_used.append({
+                        "fileName":     file_name,
+                        "pages":        None,
+                        "extractCount": len(records),
+                    })
+                    logger.info(f"✅ {len(records)} records extraits de '{file_name}'")
 
             else:
                 logger.warning(f"Format non supporté par l'agent staffing : {suffix}")
                 continue
 
-            if records:
-                all_records.extend(records)
-                sources_used.append({
-                    "fileName":     file_name,
-                    "pages":        None,
-                    "extractCount": len(records),
-                })
-                logger.info(f"✅ {len(records)} records extraits de '{file_name}'")
-
         except Exception as e:
             logger.error(f"Erreur extraction '{file_name}': {e}")
+
+    if dfs_to_extract:
+        try:
+            excel_records = extract_from_multiple_dataframes(dfs_to_extract)
+            if excel_records:
+                all_records.extend(excel_records)
+                for fn in excel_csv_files:
+                    sources_used.append({
+                        "fileName":     fn,
+                        "pages":        None,
+                        "extractCount": len(excel_records),
+                    })
+                logger.info(f"✅ {len(excel_records)} records extraits au total des fichiers Excel/CSV")
+        except Exception as e:
+            logger.error(f"Erreur lors de la fusion/extraction des DataFrames Excel/CSV : {e}")
 
     if not all_records:
         result["error"] = (
             "⚠️ Aucune donnée de staffing n'a pu être extraite des fichiers du projet. "
-            "Vérifiez que les fichiers contiennent des colonnes : Employé, Mois, Jours, TJM."
+            "Vérifiez que les fichiers contiennent des colonnes : Employé, Mois, Jours, CJM."
         )
         result["answer"] = result["error"]
         return result
@@ -158,33 +192,58 @@ def run_staffing_agent(
 
     # Si l'utilisateur demande explicitement tous les collaborateurs, un bilan global ou complet, on n'hérite pas du filtre de l'historique
     lower_q = question.lower()
-    is_global_request = any(kw in lower_q for kw in ["tous", "tout", "toute", "toutes", "chaque", "global", "général", "general", "complet", "liste"])
+    is_global_request = any(kw in lower_q for kw in ["tous", "tout", "toute", "toutes", "chaque", "global", "général", "general", "complet", "liste", "par employé", "par employe", "par employer", "par collaborateur", "par projet", "par mois", "comparatif", "classement", "répartition", "repartition"])
+    is_hiring_query = any(kw in lower_q for kw in ["debuter", "débuter", "demarrer", "démarrer", "recrute", "embauche", "démarrage", "demarrage", "date de debut", "date de demarrage", "commencer", "commence"])
 
-    # ── 2. Détecter l'année dans la question et filtrer les records ──
+    # ── 2. Détecter l'année ou une date précise dans la question ──
     year_filter = _extract_year_from_question(question)
-    if not year_filter and history and not is_global_request:
+    date_match = re.search(r"\b(20\d{2}[-/]\d{2}[-/]\d{2})\b", question)
+    date_filter = date_match.group(1).replace("/", "-") if date_match else None
+
+    if not year_filter and not date_filter and history and not is_global_request:
         for h in reversed(history[-6:]):
             if h.get("role") == "user":
-                year_filter = _extract_year_from_question(h.get("content", ""))
-                if year_filter:
-                    logger.info(f"📅 Année {year_filter} récupérée depuis l'historique récent.")
+                hist_q = h.get("content", "")
+                year_filter = _extract_year_from_question(hist_q)
+                dm = re.search(r"\b(20\d{2}[-/]\d{2}[-/]\d{2})\b", hist_q)
+                date_filter = dm.group(1).replace("/", "-") if dm else None
+                if year_filter or date_filter:
+                    logger.info("📅 Année/Date récupérée depuis l'historique récent.")
                     break
 
-    if year_filter:
-        filtered_records = [r for r in all_records if r.get("mois", "").startswith(year_filter)]
+    if date_filter and is_hiring_query:
+        filtered_records = [r for r in all_records if r.get("date_demarrage", "").startswith(date_filter)]
+        if filtered_records:
+            all_records = filtered_records
+            logger.info(f"📅 Filtrage par date de démarrage exacte {date_filter} : {len(all_records)} records conservés.")
+        else:
+            all_records = []
+            logger.warning(f"⚠️ Aucun record trouvé avec la date de démarrage {date_filter}.")
+    elif year_filter:
+        if is_hiring_query:
+            filtered_records = [r for r in all_records if r.get("date_demarrage", "").startswith(year_filter)]
+        else:
+            filtered_records = [r for r in all_records if r.get("mois", "").startswith(year_filter)]
+
         if filtered_records:
             all_records = filtered_records
             logger.info(f"📅 Filtrage par année {year_filter} : {len(all_records)} records conservés.")
         else:
-            all_records = []
-            logger.warning(f"⚠️ Aucun record trouvé pour l'année {year_filter}.")
+            # Si on ne trouve rien avec le filtre d'année mois, on essaie comme fallback sur la date de démarrage
+            fb_records = [r for r in all_records if r.get("date_demarrage", "").startswith(year_filter)]
+            if fb_records:
+                all_records = fb_records
+                logger.info(f"📅 Fallback filtrage par année de démarrage {year_filter} : {len(all_records)} records.")
+            else:
+                all_records = []
+                logger.warning(f"⚠️ Aucun record trouvé pour l'année {year_filter}.")
 
     # ── 3. Détecter l'employé dans la question ────────────────────
     employes_found = _extract_employes_from_question(question, all_records) if all_records else []
     
     # Si l'utilisateur demande explicitement tous les collaborateurs, un bilan global ou complet, on n'hérite pas du filtre de l'historique
     lower_q = question.lower()
-    is_global_request = any(kw in lower_q for kw in ["tous", "tout", "toute", "toutes", "chaque", "global", "général", "general", "complet", "liste"])
+    is_global_request = any(kw in lower_q for kw in ["tous", "tout", "toute", "toutes", "chaque", "global", "général", "general", "complet", "liste", "par employé", "par employe", "par employer", "par collaborateur", "par projet", "par mois", "comparatif", "classement", "répartition", "repartition"])
 
     if not employes_found and not force_employe and history and not is_global_request:
         for h in reversed(history[-6:]):
@@ -206,11 +265,29 @@ def run_staffing_agent(
 
     # ── 4. Détecter le projet dans la question ────────────────────
     projet_filter = _extract_projet_from_question(question, all_records) if all_records else None
-    if not projet_filter and history and not is_global_request:
+    is_project_list_request = any(kw in lower_q for kw in ["projets", "les projet", "les projets", "quel projet", "quels projets", "sur quoi", "travaillé sur", "travaille sur"])
+    if not projet_filter and history and not is_global_request and not is_project_list_request:
         for h in reversed(history[-6:]):
             if h.get("role") == "user":
-                projet_filter = _extract_projet_from_question(h.get("content", ""), all_records)
-                if projet_filter:
+                proj_candidate = _extract_projet_from_question(h.get("content", ""), all_records)
+                if proj_candidate:
+                    # Vérifier si l'employé filtré travaille sur ce projet candidat
+                    if employe_filter:
+                        emp_list = [employe_filter] if isinstance(employe_filter, str) else employe_filter
+                        has_records = False
+                        for emp_f in emp_list:
+                            has_records = any(
+                                emp_f.lower() in str(r.get("employe", "")).lower() and
+                                proj_candidate.lower() in str(r.get("projet", "")).lower()
+                                for r in all_records
+                            )
+                            if has_records:
+                                break
+                        if not has_records:
+                            logger.info(f"📁 Projet candidat {proj_candidate} ignoré car l'employé {employe_filter} n'y travaille pas.")
+                            continue
+                    
+                    projet_filter = proj_candidate
                     logger.info(f"📁 Projet {projet_filter} récupéré depuis l'historique récent.")
                     break
 
@@ -228,6 +305,7 @@ def run_staffing_agent(
             projet_filter            = projet_filter,
             ca_facturable            = ca_facturable,
             cout_journalier_interne  = cout_journalier_interne,
+            question                 = question,
         )
 
     if analysis.get("erreur"):
@@ -237,12 +315,32 @@ def run_staffing_agent(
 
     # ── 5. Générer les graphiques uniquement si demandés ──────────
     lower_q = question.lower()
-    graph_keywords = ["graphe", "graphique", "chart", "plot", "barre", "courbe", "diagramme", "barchart", "piechart", "dessine", "représente", "visuelle", "visualiser", "char", "pie", "bar", "grap", "line"]
+    graph_keywords = ["graphe", "graphique", "chart", "plot", "barre", "courbe", "diagramme", "barchart", "piechart", "dessine", "représente", "visuelle", "visualiser", "char", "pie", "bar", "grap", "line", "camembert", "tarte", "radar", "toile", "araignée", "araignee"]
     if any(kw in lower_q for kw in graph_keywords):
         # 1. Détection du nombre (limite du classement)
         top_n = None
-        match_n = re.search(r"\b(?:top|les|classement)\s*(\d+)\b", lower_q)
-        if match_n:
+        
+        # Convertir les mots de nombres français en chiffres
+        french_numbers = {
+            "un": 1, "une": 1, "deux": 2, "trois": 3, "quatre": 4, "cinq": 5,
+            "six": 6, "sept": 7, "huit": 8, "neuf": 9, "dix": 10
+        }
+        
+        q_for_num = lower_q
+        for word, val in french_numbers.items():
+            q_for_num = re.sub(rf"\b{word}\b", str(val), q_for_num)
+            
+        match_n = re.search(r"\b(?:top|les|classement|pour|de|seulement|uniquement)\s*(\d+)\b", q_for_num)
+        if not match_n:
+            match_n = re.search(r"\b(\d+)\s*(?:employe|employé|collaborateur|pers|salarie)", q_for_num)
+        if not match_n:
+            # Fallback simple sur n'importe quel chiffre seul entre 1 et 25
+            for m in re.finditer(r"\b(\d+)\b", q_for_num):
+                val = int(m.group(1))
+                if 1 <= val <= 25:
+                    top_n = val
+                    break
+        else:
             top_n = int(match_n.group(1))
             
         # 2. Détection de la métrique
@@ -253,6 +351,10 @@ def run_staffing_agent(
             metric = "days"
         elif any(kw in lower_q for kw in ["rentabilité", "rentabilite", "gain", "perte", "bénéfice", "benefice", "rentable"]):
             metric = "gain"
+        elif any(kw in lower_q for kw in ["salaire", "salaires", "saliare", "saliares", "salarie", "salaries", "paye", "paie", "rémunération", "remuneration"]):
+            metric = "salary"
+        elif any(kw in lower_q for kw in ["tjm", "cjm"]):
+            metric = "cjm"
             
         # 3. Détection de l'ordre
         order = None
@@ -265,16 +367,26 @@ def run_staffing_agent(
         chart_type = None
         if any(kw in lower_q for kw in ["pie", "camembert", "tarte"]):
             chart_type = "pie"
-        elif any(kw in lower_q for kw in ["bar", "barre", "histogramme"]):
+        elif any(re.search(rf"\b{kw}\b" if kw == "bar" else kw, lower_q) for kw in ["bar", "barre", "histogramme"]):
             chart_type = "bar"
+        elif any(kw in lower_q for kw in ["radar", "toile", "araignée", "araignee"]):
+            chart_type = "radar"
 
         # 5. Héritage des paramètres de classement manquants depuis l'historique
         if history and (top_n is None or metric is None or order is None or chart_type is None):
             for h in reversed(history[-6:]):
                 if h.get("role") == "user":
                     hist_content = h.get("content", "").lower()
+                    
+                    # Convertir les nombres français dans l'historique aussi
+                    h_q_for_num = hist_content
+                    for word, val in french_numbers.items():
+                        h_q_for_num = re.sub(rf"\b{word}\b", str(val), h_q_for_num)
+                        
                     if top_n is None:
-                        m = re.search(r"\b(?:top|les|classement)\s*(\d+)\b", hist_content)
+                        m = re.search(r"\b(?:top|les|classement|pour|de|seulement|uniquement)\s*(\d+)\b", h_q_for_num)
+                        if not m:
+                            m = re.search(r"\b(\d+)\s*(?:employe|employé|collaborateur|pers|salarie)", h_q_for_num)
                         if m:
                             top_n = int(m.group(1))
                     if metric is None:
@@ -284,6 +396,10 @@ def run_staffing_agent(
                             metric = "days"
                         elif any(kw in hist_content for kw in ["rentabilité", "rentabilite", "gain", "perte", "bénéfice", "benefice", "rentable"]):
                             metric = "gain"
+                        elif any(kw in hist_content for kw in ["salaire", "salaires", "saliare", "saliares", "salarie", "salaries", "paye", "paie", "rémunération", "remuneration"]):
+                            metric = "salary"
+                        elif any(kw in hist_content for kw in ["tjm", "cjm"]):
+                            metric = "cjm"
                     if order is None:
                         if any(kw in hist_content for kw in ["moins", "pire", "minimum", "min", "bas"]):
                             order = "asc"
@@ -292,17 +408,44 @@ def run_staffing_agent(
                     if chart_type is None:
                         if any(kw in hist_content for kw in ["pie", "camembert", "tarte"]):
                             chart_type = "pie"
-                        elif any(kw in hist_content for kw in ["bar", "barre", "histogramme"]):
+                        elif any(re.search(rf"\b{kw}\b" if kw == "bar" else kw, hist_content) for kw in ["bar", "barre", "histogramme"]):
                             chart_type = "bar"
+                        elif any(kw in hist_content for kw in ["radar", "toile", "araignée", "araignee"]):
+                            chart_type = "radar"
 
         # Valeurs par défaut finales
-        if top_n is None: top_n = 5
+        if top_n is None:
+            if any(kw in lower_q for kw in ["top", "classement"]):
+                top_n = 5
+            else:
+                top_n = 20
         if metric is None: metric = "gain"
         if order is None: order = "desc"
         if chart_type is None: chart_type = "bar"
+        logger.info(f"DEBUG RADAR: lower_q='{lower_q}'")
+        logger.info(f"DEBUG RADAR: chart_type detected as '{chart_type}'")
+
+        # Si des employés spécifiques sont mentionnés dans la question, on filtre par_employe pour les graphiques
+        mentioned_employees = []
+        par_emp = analysis.get("par_employe", {})
+        q_for_names = lower_q.replace("charibi", "chraibi")
+        for emp_key in par_emp.keys():
+            clean_key = re.sub(r"\s*\(id:\s*\d+\)", "", emp_key).lower().strip()
+            if clean_key in q_for_names:
+                mentioned_employees.append(emp_key)
+            else:
+                parts = clean_key.split()
+                if len(parts) >= 2 and all(part in q_for_names for part in parts if len(part) > 2):
+                    mentioned_employees.append(emp_key)
+                
+        if mentioned_employees:
+            analysis_for_charts = analysis.copy()
+            analysis_for_charts["par_employe"] = {k: v for k, v in par_emp.items() if k in mentioned_employees}
+        else:
+            analysis_for_charts = analysis
             
         charts = generate_staffing_charts(
-            analysis, 
+            analysis_for_charts, 
             employe_filter, 
             theme_mode=theme_mode, 
             top_n=top_n, 
@@ -310,14 +453,17 @@ def run_staffing_agent(
             order=order, 
             chart_type=chart_type
         )
+        logger.info(f"DEBUG RADAR: generate_staffing_charts returned {len(charts)} charts")
+        for c in charts:
+            logger.info(f"  - Chart: '{c.get('title')}', type='{c.get('type')}'")
         
         # 6. Détection du sujet (topic_q) pour le filtrage thématique
         topic_q = lower_q
         topic_keywords = [
             "rentabilité", "rentabilite", "gain", "perte", "bénéfice", "benefice", "rentable", "top", "meilleur", "moins", "plus", "classement",
-            "projet", "projets", "tjm", "salaire", "salaires", "saliare", "saliares", "salarie", "salaries", "paye", "paie", "gagne", "gagné",
+            "projet", "projets", "tjm", "cjm", "salaire", "salaires", "saliare", "saliares", "salarie", "salaries", "paye", "paie", "gagne", "gagné",
             "rémunération", "remuneration", "occupation", "jours", "jour", "travail", "charge", "temps", "occupe", "occupé", "activité", "activite",
-            "coût", "cout", "dépense", "depense", "évolution", "evolution", "mensuel"
+            "coût", "cout", "dépense", "depense", "évolution", "evolution", "mensuel", "radar", "toile", "araignée", "araignee"
         ]
         if not any(kw in lower_q for kw in topic_keywords) and history:
             for h in reversed(history[-6:]):
@@ -331,29 +477,47 @@ def run_staffing_agent(
         # Filtrage thématique précis sur topic_q
         matched_charts = []
         
-        # 1. Rentabilité / Top employés / Classements
-        if any(kw in topic_q for kw in ["rentabilité", "rentabilite", "gain", "perte", "bénéfice", "benefice", "rentable", "top", "meilleur", "moins", "plus", "classement"]):
-            if any(emp_kw in topic_q for emp_kw in ["employe", "employé", "employer", "collaborateur", "ressource", "chaque", "tous", "comparatif"]) or employe_filter:
-                matched_charts.extend([c for c in charts if c.get("title") in ["Classement des employés rentables", "Classement des employés par coût", "Classement des employés par activité"]])
-                matched_charts.extend([c for c in charts if c.get("title") == "Taux de gain par employé"])
+        # Détection des sujets spécifiques
+        is_salary = any(kw in topic_q for kw in ["salaire", "salaires", "saliare", "saliares", "salarie", "salaries", "paye", "paie", "rémunération", "remuneration"])
+        is_cjm = any(kw in topic_q for kw in ["tjm", "cjm", "tjm comparatif", "cjm comparatif"])
+        is_days = any(kw in topic_q for kw in ["occupation", "jours", "jour", "travail", "charge", "temps", "occupe", "occupé", "activité", "activite"])
+        is_cost = any(kw in topic_q for kw in ["coût", "cout", "dépense", "depense"]) and not any(kw in topic_q for kw in ["projet", "rentabilité", "rentabilite"])
+        is_project = "projet" in topic_q or (any(kw in topic_q for kw in ["repartition", "répartition", "camembert", "pie"]) and not any(kw in topic_q for kw in ["employe", "employé", "employer", "collaborateur"]))
+        is_radar = any(kw in topic_q for kw in ["radar", "toile", "araignée", "araignee"])
+
+        if is_radar:
+            if "projet" in topic_q:
+                matched_charts.extend([c for c in charts if c.get("title") == "Répartition par projet"])
+            elif any(x in topic_q for x in ["cjm", "tjm"]):
+                matched_charts.extend([c for c in charts if c.get("title") == "CJM comparatif"])
+            elif any(x in topic_q for x in ["salaire", "salaires"]):
+                matched_charts.extend([c for c in charts if c.get("title") == "Salaire mensuel comparatif"])
+            elif any(x in topic_q for x in ["gain", "perte", "rentable", "rentabilité"]):
+                matched_charts.extend([c for c in charts if c.get("title") == "Classement des employés rentables"])
             else:
-                matched_charts.extend([c for c in charts if c.get("title") == "Rentabilité"])
-            
-        # 2. Répartition par projet
-        if "projet" in topic_q or (any(kw in topic_q for kw in ["repartition", "répartition", "camembert", "pie"]) and not any(kw in topic_q for kw in ["employe", "employé", "employer", "collaborateur"])):
+                matched_charts.extend([c for c in charts if c.get("title") == "Profil radar employés"])
+        elif is_salary:
+            matched_charts.extend([c for c in charts if "salaire" in c.get("title", "").lower()])
+        elif is_cjm:
+            matched_charts.extend([c for c in charts if any(x in c.get("title", "").lower() for x in ["tjm", "cjm"])])
+        elif is_days:
+            if any(emp_kw in topic_q for emp_kw in ["employe", "employé", "employer", "collaborateur", "ressource", "chaque", "tous", "comparatif"]) or employe_filter:
+                matched_charts.extend([c for c in charts if c.get("title") == "Classement des employés par activité"])
+            else:
+                matched_charts.extend([c for c in charts if c.get("title") == "Occupation mensuelle"])
+        elif is_cost:
+            matched_charts.extend([c for c in charts if c.get("title") == "Coût mensuel" or c.get("title") == "Classement des employés par coût"])
+        elif is_project:
             matched_charts.extend([c for c in charts if c.get("title") == "Répartition par projet"])
-            
-        # 3. Salaire mensuel comparatif / TJM
-        if any(kw in topic_q for kw in ["tjm", "salaire", "salaires", "saliare", "saliares", "salarie", "salaries", "paye", "paie", "gagne", "gagné", "comparatif", "rémunération", "remuneration", "tjm comparatif"]):
-            matched_charts.extend([c for c in charts if "salaire" in c.get("title", "").lower() or "tjm" in c.get("title", "").lower() or "comparatif des employés" in c.get("title", "").lower()])
-            
-        # 4. Occupation mensuelle
-        if any(kw in topic_q for kw in ["occupation", "jours", "jour", "travail", "charge", "temps", "occupe", "occupé", "activité", "activite"]):
-            matched_charts.extend([c for c in charts if c.get("title") == "Occupation mensuelle"])
-            
-        # 5. Coût mensuel (historique/évolution, non lié aux projets ou à la rentabilité)
-        if any(kw in topic_q for kw in ["coût", "cout", "dépense", "depense", "évolution", "evolution", "mensuel"]) and not any(kw in topic_q for kw in ["projet", "rentabilité", "rentabilite"]):
-            matched_charts.extend([c for c in charts if c.get("title") == "Coût mensuel"])
+
+        # Si ce n'est aucun sujet de métrique spécifique, on applique la rentabilité / classement général
+        if not matched_charts:
+            if any(kw in topic_q for kw in ["rentabilité", "rentabilite", "gain", "perte", "bénéfice", "benefice", "rentable", "top", "meilleur", "moins", "plus", "classement"]):
+                if any(emp_kw in topic_q for emp_kw in ["employe", "employé", "employer", "collaborateur", "ressource", "chaque", "tous", "comparatif"]) or employe_filter:
+                    matched_charts.extend([c for c in charts if c.get("title") in ["Classement des employés rentables", "Classement des employés par coût", "Classement des employés par activité"]])
+                    matched_charts.extend([c for c in charts if c.get("title") == "Taux de gain par employé"])
+                else:
+                    matched_charts.extend([c for c in charts if c.get("title") == "Rentabilité"])
 
         # Si des filtres thématiques ont correspondu, on filtre la liste
         if matched_charts:
@@ -361,13 +525,15 @@ def run_staffing_agent(
             seen = set()
             charts = [c for c in matched_charts if c.get("title") not in seen and not seen.add(c.get("title"))]
             
-            # Si l'utilisateur a spécifié un type de graphique particulier (ex: pie, bar, line), on filtre également par ce type
+            # Si l'utilisateur a spécifié un type de graphique particulier (ex: pie, bar, line, radar), on filtre également par ce type
             if "pie" in lower_q or "camembert" in lower_q:
                 charts = [c for c in charts if c.get("type") == "pie"]
-            elif "bar" in lower_q or "barre" in lower_q:
+            elif "barre" in lower_q or re.search(r"\bbar\b", lower_q):
                 charts = [c for c in charts if c.get("type") == "bar"]
             elif "line" in lower_q or "courbe" in lower_q:
                 charts = [c for c in charts if c.get("type") == "line"]
+            elif "radar" in lower_q or "araignée" in lower_q:
+                charts = [c for c in charts if c.get("type") == "radar"]
         else:
             # Si aucun filtre thématique n'a fonctionné, on ne renvoie pas tout par défaut,
             # SAUF si l'utilisateur a explicitement demandé de voir tous les graphiques / tableaux de bord
@@ -376,10 +542,15 @@ def run_staffing_agent(
                     charts = [c for c in charts if c.get("type") == "pie"]
                 elif "line" in lower_q or "courbe" in lower_q:
                     charts = [c for c in charts if c.get("type") == "line"]
-                elif "bar" in lower_q or "barre" in lower_q:
+                elif "barre" in lower_q or re.search(r"\bbar\b", lower_q):
                     charts = [c for c in charts if c.get("type") == "bar"]
-            else:
-                charts = []
+                elif "radar" in lower_q or "araignée" in lower_q:
+                    charts = [c for c in charts if c.get("type") == "radar"]
+            # Log inside if block
+            logger.info(f"DEBUG RADAR: matched_charts count={len(matched_charts)}")
+            for c in matched_charts:
+                logger.info(f"  - Matched Chart: '{c.get('title')}', type='{c.get('type')}'")
+            logger.info(f"DEBUG RADAR: final charts count={len(charts)}")
     else:
         charts = []
     result["charts"] = charts
@@ -402,8 +573,34 @@ def run_staffing_agent(
         chain = STAFFING_PROMPT | llm | StrOutputParser()
         answer = chain.invoke({"synthese": synthese, "question": question, "history_section": history_section})
     except Exception as e:
-        logger.error(f"Erreur LLM staffing : {e}")
-        answer = synthese   # fallback : retourner la synthèse calculée directement
+        logger.warning(f"⚠️ Primary LLM failed: {e}. Attempting fallback model gemma2-9b-it...")
+        try:
+            from langchain_groq import ChatGroq
+            fallback_llm = ChatGroq(
+                model="gemma2-9b-it",
+                api_key=os.getenv("GROQ_API_KEY"),
+                temperature=0.1,
+                max_tokens=2048
+            )
+            chain = STAFFING_PROMPT | fallback_llm | StrOutputParser()
+            answer = chain.invoke({"synthese": synthese, "question": question, "history_section": history_section})
+            logger.info("✅ Fallback model gemma2-9b-it succeeded.")
+        except Exception as fb_err:
+            logger.warning(f"⚠️ Fallback gemma2-9b-it failed: {fb_err}. Attempting fallback llama-3.1-8b-instant...")
+            try:
+                from langchain_groq import ChatGroq
+                fallback_llm2 = ChatGroq(
+                    model="llama-3.1-8b-instant",
+                    api_key=os.getenv("GROQ_API_KEY"),
+                    temperature=0.1,
+                    max_tokens=2048
+                )
+                chain = STAFFING_PROMPT | fallback_llm2 | StrOutputParser()
+                answer = chain.invoke({"synthese": synthese, "question": question, "history_section": history_section})
+                logger.info("✅ Fallback model llama-3.1-8b-instant succeeded.")
+            except Exception as fb_err2:
+                logger.error(f"❌ All fallback models failed. Final error: {fb_err2}")
+                answer = synthese   # fallback : retourner la synthèse calculée directement
 
     result["answer"]  = answer
     result["sources"] = sources_used
@@ -428,24 +625,32 @@ def _extract_employes_from_question(question: str, records: List[Dict]) -> List[
     Retourne la liste des noms exacts.
     """
     employes = list({r["employe"] for r in records if r.get("employe")})
-    q_lower  = question.lower()
-    matched = []
-
+    q_lower  = question.lower().replace("charibi", "chraibi")
+    
+    emp_scores = {}
     for emp in employes:
-        # Correspondance exacte (avec ID)
-        if emp.lower() in q_lower:
-            matched.append(emp)
-            continue
-        # Essayer sans parenthèses pour l'ID
-        emp_clean_id = emp.lower().replace("(", "").replace(")", "").replace(":", "")
-        if emp_clean_id in q_lower:
-            matched.append(emp)
-            continue
-        # Essayer avec le nom de base
+        emp_lower = emp.lower()
+        # 1. Correspondance exacte complète (avec ID ou nom de base complet)
         base_name = re.sub(r"\s*\(id:\s*\d+\)", "", emp, flags=re.IGNORECASE).strip().lower()
+        if base_name in q_lower or emp_lower in q_lower:
+            emp_scores[emp] = 10
+            continue
+            
+        # 2. Correspondance par parties (prénom / nom)
         parts = base_name.split()
-        if any(p in q_lower for p in parts if len(p) > 2):
-            matched.append(emp)
+        score = 0
+        for p in parts:
+            if len(p) >= 4 and p in q_lower:
+                score += 1
+        if score > 0:
+            emp_scores[emp] = score
+
+    if not emp_scores:
+        return []
+
+    # Ne garder que le ou les employés ayant le score maximal
+    max_score = max(emp_scores.values())
+    matched = [emp for emp, score in emp_scores.items() if score == max_score]
 
     seen = set()
     return [x for x in matched if not (x in seen or seen.add(x))]
@@ -480,13 +685,53 @@ def _extract_amount(question: str, keywords: List[str]) -> Optional[float]:
 
 def _extract_projet_from_question(question: str, records: List[Dict]) -> Optional[str]:
     """
-    Cherche si un nom de projet connu est mentionné dans la question.
-    Retourne le nom exact ou None.
+    Cherche si un nom de projet connu (ou une partie significative) est mentionné dans la question.
+    Retourne le nom exact du projet ou None.
     """
     projets = list({r["projet"] for r in records if r.get("projet")})
     q_lower = question.lower()
+    
+    # 1. Essayer d'abord une correspondance exacte du nom de base entier
     for proj in projets:
-        if proj.lower() in q_lower:
-            logger.info(f"Projet détecté dans la question : {proj}")
+        # Enlever l'année à la fin si présente (ex: " (2025)")
+        base_proj = re.sub(r"\s*\(\d{4}\)\s*$", "", proj).strip().lower()
+        if base_proj in q_lower:
+            logger.info(f"Projet détecté via correspondance exacte du nom de base : {proj}")
             return proj
+            
+    # 2. Chercher les acronymes ou noms de clients spécifiques entre crochets/parenthèses
+    best_match = None
+    best_score = 0
+    
+    for proj in projets:
+        bracket_match = re.search(r"\[(.*?)\]", proj)
+        if bracket_match:
+            client_part = bracket_match.group(1).lower()
+            if client_part in q_lower:
+                score = len(client_part)
+                if score > best_score:
+                    best_score = score
+                    best_match = proj
+            
+            paren_match = re.search(r"\((.*?)\)", client_part)
+            if paren_match:
+                acronym = paren_match.group(1).strip().lower()
+                if re.search(rf"\b{re.escape(acronym)}\b", q_lower):
+                    score = 10
+                    if score > best_score:
+                        best_score = score
+                        best_match = proj
+                        
+            words = re.findall(r"\b\w{3,}\b", client_part)
+            for w in words:
+                if w not in ("bank", "group", "assurance") and re.search(rf"\b{re.escape(w)}\b", q_lower):
+                    score = len(w)
+                    if score > best_score:
+                        best_score = score
+                        best_match = proj
+                        
+    if best_match:
+        logger.info(f"🎯 Projet détecté via acronyme ou client : {best_match} (score={best_score})")
+        return best_match
+        
     return None

@@ -30,6 +30,10 @@ const routes: Routes = [
     loadChildren: () => import('./data-base/data-base.module').then(m => m.DataBaseModule),
   },
   {
+    path: 'staffing',
+    loadChildren: () => import('./staffing/staffing.module').then(m => m.StaffingModule),
+  },
+  {
     path: '404',
     component: PageNotFoundComponent },
 ];

@@ -10,6 +10,7 @@ Calcule à partir des records extraits :
 
 import calendar
 import logging
+import re
 from collections import defaultdict
 from typing import List, Dict, Any, Optional, Tuple
 
@@ -31,6 +32,7 @@ def compute_staffing_analysis(
     projet_filter: Optional[str] = None,
     ca_facturable: Optional[float] = None,   # CA total facturé (si connu)
     cout_journalier_interne: Optional[float] = None,  # coût interne/jour (salaire+charges)
+    question: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Paramètres
@@ -56,6 +58,10 @@ def compute_staffing_analysis(
         return {"erreur": "Aucune donnée de staffing disponible.", "dataframe": pd.DataFrame()}
 
     df = pd.DataFrame(records)
+    # 1. Create a copy of the unfiltered DataFrame for project-level stats
+    df_unfiltered = df.copy()
+    df_unfiltered["salaire_mensuel"] = df_unfiltered["tjm"] * JOURS_OUVRES_MOIS
+    df_unfiltered["cout"] = df_unfiltered["jours"] * df_unfiltered["tjm"]
 
     # Filtrage par employé si demandé
     if employe_filter:
@@ -88,9 +94,8 @@ def compute_staffing_analysis(
                 "dataframe": pd.DataFrame()
             }
 
-    # Convert monthly salary to daily rate for calculations
-    df["salaire_mensuel"] = df["tjm"]
-    df["tjm"] = df["salaire_mensuel"] / JOURS_OUVRES_MOIS
+    # df["tjm"] est déjà le coût journalier (CJM) extrait. On reconstruit le salaire mensuel.
+    df["salaire_mensuel"] = df["tjm"] * JOURS_OUVRES_MOIS
     df["cout"] = df["jours"] * df["tjm"]
 
     # ── Par employé ───────────────────────────────────────────────
@@ -103,7 +108,7 @@ def compute_staffing_analysis(
             taux_occ   = round(jours_mois / JOURS_OUVRES_MOIS * 100, 1)
             
             # CA (budget) facturable pour ce mois
-            ca_mois = mg["budget"].sum() if "budget" in mg.columns else 0.0
+            ca_mois = sum(pgrp["budget"].max() for _, pgrp in mg.groupby("projet")) if "budget" in mg.columns else 0.0
             gain_mois = ca_mois - cout_mois
             marge_mois = (gain_mois / ca_mois * 100) if ca_mois else 0.0
             
@@ -117,20 +122,34 @@ def compute_staffing_analysis(
                 "marge_pct":    round(marge_mois, 1),
             })
 
+        projets_detail = []
+        for proj, pgrp in grp.groupby("projet"):
+            projets_detail.append({
+                "projet": proj,
+                "jours": round(pgrp["jours"].sum(), 1),
+                "cout": round(pgrp["cout"].sum(), 2)
+            })
+
         par_employe[emp] = {
             "total_jours":  round(grp["jours"].sum(), 1),
             "total_cout":   round(grp["cout"].sum(), 2),
+            "total_ca":     round(sum(pgrp["budget"].max() for _, pgrp in grp.groupby("projet")), 2),
             "tjm_moyen":    round(grp["tjm"].mean(), 2), # Daily rate (calculated)
             "salaire_moyen": round(grp["salaire_mensuel"].mean(), 2), # Monthly salary (original)
             "projets":      grp["projet"].unique().tolist(),
+            "projet_detail": projets_detail,
             "mois_detail":  sorted(mois_detail, key=lambda x: x["mois"]),
             "nb_mois":      grp["mois"].nunique(),
+            "profil":         grp["profil"].iloc[0] if "profil" in grp.columns else "",
+            "date_demarrage": grp["date_demarrage"].iloc[0] if "date_demarrage" in grp.columns else "",
+            "anciennete":     grp["anciennete"].iloc[0] if "anciennete" in grp.columns else "",
+            "localisation":   grp["localisation"].iloc[0] if "localisation" in grp.columns else "",
         }
 
     # ── Par mois ──────────────────────────────────────────────────
     par_mois: Dict[str, Any] = {}
     for mois, grp in df.groupby("mois"):
-        ca_mois = grp["budget"].sum() if "budget" in grp.columns else 0.0
+        ca_mois = sum(pgrp["budget"].max() for _, pgrp in grp.groupby("projet")) if "budget" in grp.columns else 0.0
         cout_mois = grp["cout"].sum()
         gain_mois = ca_mois - cout_mois
         marge_mois = (gain_mois / ca_mois * 100) if ca_mois else 0.0
@@ -144,10 +163,22 @@ def compute_staffing_analysis(
 
     # ── Par projet ────────────────────────────────────────────────
     par_projet: Dict[str, Any] = {}
-    for proj, grp in df.groupby("projet"):
+    projects_to_show = df["projet"].unique() if not df.empty else []
+    for proj, grp in df_unfiltered.groupby("projet"):
+        if proj not in projects_to_show:
+            continue
+        ca_proj = grp["budget"].max() if "budget" in grp.columns and len(grp) > 0 else 0.0
+        cout_proj = grp["cout"].sum()
+        gain_proj = ca_proj - cout_proj
+        marge_proj = (gain_proj / ca_proj * 100) if ca_proj else 0.0
+        roi_proj = (gain_proj / cout_proj * 100) if cout_proj else 0.0
         par_projet[proj] = {
             "total_jours": round(grp["jours"].sum(), 1),
-            "total_cout":  round(grp["cout"].sum(), 2),
+            "total_cout":  round(cout_proj, 2),
+            "ca":          round(ca_proj, 2),
+            "gain":        round(gain_proj, 2),
+            "marge_pct":   round(marge_proj, 1),
+            "roi_pct":     round(roi_proj, 1),
         }
 
     # ── Rentabilité ───────────────────────────────────────────────
@@ -156,8 +187,8 @@ def compute_staffing_analysis(
 
     # Fallback sur la somme du budget_projet de l'Excel si aucun CA n'est mentionné dans la question
     is_ca_fallback = False
-    if ca_facturable is None and "budget" in df.columns and df["budget"].sum() > 0:
-        ca_facturable = df["budget"].sum()
+    if ca_facturable is None and "budget" in df.columns and len(df) > 0:
+        ca_facturable = sum(pgrp["budget"].max() for _, pgrp in df.groupby("projet"))
         is_ca_fallback = True
 
     if ca_facturable is not None:
@@ -198,7 +229,9 @@ def compute_staffing_analysis(
         employe_filter,
         annees_str,
         show_global_rentability=show_global_rentability,
-        projet_filter=projet_filter
+        projet_filter=projet_filter,
+        par_projet=par_projet,
+        question=question
     )
 
     return {
@@ -224,58 +257,134 @@ def _build_synthese(
     annees_str: str,
     show_global_rentability: bool = False,
     projet_filter: Optional[str] = None,
+    par_projet: Optional[Dict] = None,
+    question: Optional[str] = None,
 ) -> str:
     lines = []
 
+    # Détecter si la question porte sur des données financières ou un bilan global
+    is_financial = True
+    if question:
+        q_low = question.lower()
+        is_financial = any(kw in q_low for kw in [
+            "coût", "cout", "ca", "budget", "gain", "perte", "marge", "rentabilité", 
+            "rentable", "roi", "salaire", "cjm", "tjm", "paye", "paie", "rémunération", 
+            "remuneration", "chiffre", "rapport", "synthese", "bilan", "financier", "financiere"
+        ])
+        # Si c'est une question simple de comptage d'employés ou de projets, ce n'est pas financier
+        if any(kw in q_low for kw in ["combien", "nombre", "liste"]) and not any(kw in q_low for kw in ["cout", "coût", "salaire", "cjm", "tjm", "budget"]):
+            is_financial = False
+
     if employe_filter:
-        header = f"Analyse de staffing — {employe_filter}"
+        header = ""
+        matched_emps = []
+        if isinstance(employe_filter, list):
+            header = f"Analyse de staffing — " + ", ".join(employe_filter)
+            for emp in par_employe.keys():
+                if emp in employe_filter:
+                    matched_emps.append(emp)
+        else:
+            header = f"Analyse de staffing — {employe_filter}"
+            filter_lower = employe_filter.lower().strip()
+            for emp in par_employe.keys():
+                emp_clean = re.sub(r"\s*\(id:\s*\d+\)", "", emp, flags=re.IGNORECASE).lower().strip()
+                if emp_clean in filter_lower or filter_lower in emp_clean or filter_lower in emp.lower():
+                    matched_emps.append(emp)
+        
+        # Fallback si aucun match précis
+        if not matched_emps:
+            matched_emps = list(par_employe.keys())
+
         if projet_filter:
             header += f" sur le projet {projet_filter}"
-        header += f" (Année(s) : {annees_str})"
         lines.append(f"## {header}")
-        for emp, data in par_employe.items():
+
+        for emp in matched_emps:
+            data = par_employe[emp]
             lines.append(f"\n### {emp}")
             lines.append(f"- **Jours travaillés** : {data['total_jours']} jours sur {data['nb_mois']} mois")
-            lines.append(f"- **Salaire mensuel** : {data['salaire_moyen']} Dhs/mois")
-            lines.append(f"- **Salaire journalier (TJM)** : {data['tjm_moyen']} Dhs/jour")
-            lines.append(f"- **Coût calculé** : {data['total_cout']:,.2f} Dhs")
+            if is_financial:
+                lines.append(f"- **Salaire mensuel** : {data['salaire_moyen']} Dhs/mois")
+                lines.append(f"- **Coût journalier moyen (CJM)** : {data['tjm_moyen']} Dhs/jour")
+                lines.append(f"- **Coût calculé** : {data['total_cout']:,.2f} Dhs")
             lines.append(f"- **Projets** : {', '.join(data['projets'])}")
 
-            lines.append("\n**Détail mensuel :**")
-            lines.append("| Mois | Jours | Taux occupation | Coût | CA facturé | Gain net | Marge |")
-            lines.append("|------|-------|-----------------|------|------------|----------|-------|")
-            for m in data["mois_detail"]:
-                statut = "🟢" if m["taux_occ_pct"] >= 80 else ("🟡" if m["taux_occ_pct"] >= 50 else "🔴")
-                ca_str = f"{m['ca']:,.2f} Dhs" if m.get('ca', 0) > 0 else "Non spécifié"
-                gain_str = f"{m['gain']:+,.2f} Dhs" if m.get('ca', 0) > 0 else "Non calculé"
-                marge_str = f"{m['marge_pct']}%" if m.get('ca', 0) > 0 else "Non calculée"
-                lines.append(
-                    f"| {m['mois']} | {m['jours']}j | {statut} {m['taux_occ_pct']}% | {m['cout']:,.2f} Dhs | {ca_str} | {gain_str} | {marge_str} |"
-                )
-    else:
-        has_budgets = any(any(m.get("ca", 0) > 0 for m in data.get("mois_detail", [])) for data in par_employe.values())
-        if has_budgets:
-            lines.append(f"## Synthèse globale de staffing et rentabilité par employé — {len(par_employe)} employé(s) (Année(s) : {annees_str})")
-            lines.append("\n| Employé | Jours travaillés | Salaire mensuel | Coût calculé | CA généré | Gain net | Taux de gain | Projets |")
-            lines.append("| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |")
-            for emp, data in par_employe.items():
-                total_ca = sum(m.get("ca", 0.0) for m in data.get("mois_detail", []))
-                total_cout = data["total_cout"]
-                gain_net = total_ca - total_cout
-                marge_pct = (gain_net / total_ca * 100) if total_ca > 0 else 0.0
-                lines.append(
-                    f"| **{emp}** | {data['total_jours']}j ({data['nb_mois']} mois) | {data['salaire_moyen']:,.2f} Dhs/mois | {total_cout:,.2f} Dhs | {total_ca:,.2f} Dhs | {gain_net:+,.2f} Dhs | {marge_pct:.1f}% | {', '.join(data['projets'])} |"
-                )
-        else:
-            lines.append(f"## Synthèse globale de staffing — {len(par_employe)} employé(s) (Année(s) : {annees_str})")
-            lines.append("\n| Employé | Jours travaillés | Salaire mensuel | Coût calculé | Projets |")
-            lines.append("| :--- | :--- | :--- | :--- | :--- |")
-            for emp, data in par_employe.items():
-                lines.append(
-                    f"| **{emp}** | {data['total_jours']}j ({data['nb_mois']} mois) | {data['salaire_moyen']:,.2f} Dhs/mois | {data['total_cout']:,.2f} Dhs | {', '.join(data['projets'])} |"
-                )
+            if is_financial and "projet_detail" in data:
+                lines.append("\n**Détail du coût de l'employé par projet :**")
+                lines.append("| Projet | Jours travaillés | Coût de l'employé |")
+                lines.append("| :--- | :---: | :---: |")
+                for pdet in data["projet_detail"]:
+                    lines.append(f"| **{pdet['projet']}** | {pdet['jours']}j | {pdet['cout']:,.2f} Dhs |")
 
-    if rentabilite and show_global_rentability:
+            if "mois_detail" in data:
+                lines.append("\n**Détail mensuel :**")
+                if is_financial:
+                    lines.append("| Mois | Jours travaillés | Taux d'occupation | Coût de la ressource |")
+                    lines.append("|------|------------------|-------------------|----------------------|")
+                    for m in data["mois_detail"]:
+                        statut = "🟢" if m["taux_occ_pct"] >= 80 else ("🟡" if m["taux_occ_pct"] >= 50 else "🔴")
+                        lines.append(
+                            f"| {m['mois']} | {m['jours']}j | {statut} {m['taux_occ_pct']}% | {m['cout']:,.2f} Dhs |"
+                        )
+                else:
+                    lines.append("| Mois | Jours travaillés | Taux d'occupation |")
+                    lines.append("|------|------------------|-------------------|")
+                    for m in data["mois_detail"]:
+                        statut = "🟢" if m["taux_occ_pct"] >= 80 else ("🟡" if m["taux_occ_pct"] >= 50 else "🔴")
+                        lines.append(
+                            f"| {m['mois']} | {m['jours']}j | {statut} {m['taux_occ_pct']}% |"
+                        )
+    else:
+        if is_financial:
+            has_budgets = any(any(m.get("ca", 0) > 0 for m in data.get("mois_detail", [])) for data in par_employe.values())
+            if has_budgets:
+                lines.append(f"## Synthèse globale de staffing et rentabilité par employé — {len(par_employe)} employé(s)")
+                lines.append("\n| Employé | Jours travaillés | CJM (Journalier) | Salaire mensuel | Coût calculé | CA généré | Gain net | Taux de gain | Projets |")
+                lines.append("| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |")
+                for emp, data in par_employe.items():
+                    total_ca = data.get("total_ca", 0.0)
+                    total_cout = data["total_cout"]
+                    gain_net = total_ca - total_cout
+                    marge_pct = (gain_net / total_ca * 100) if total_ca > 0 else 0.0
+                    lines.append(
+                        f"| **{emp}** | {data['total_jours']}j ({data['nb_mois']} mois) | {data['tjm_moyen']:,.2f} Dhs/jour | {data['salaire_moyen']:,.2f} Dhs/mois | {total_cout:,.2f} Dhs | {total_ca:,.2f} Dhs | {gain_net:+,.2f} Dhs | {marge_pct:.1f}% | {', '.join(data['projets'])} |"
+                    )
+            else:
+                lines.append(f"## Synthèse globale de staffing — {len(par_employe)} employé(s)")
+                lines.append("\n| Employé | Jours travaillés | CJM (Journalier) | Salaire mensuel | Coût calculé | Projets |")
+                lines.append("| :--- | :--- | :--- | :--- | :--- | :--- |")
+                for emp, data in par_employe.items():
+                    lines.append(
+                        f"| **{emp}** | {data['total_jours']}j ({data['nb_mois']} mois) | {data['tjm_moyen']:,.2f} Dhs/jour | {data['salaire_moyen']:,.2f} Dhs/mois | {data['total_cout']:,.2f} Dhs | {', '.join(data['projets'])} |"
+                    )
+        else:
+            # Mode très compact pour éviter d'exploser la limite de tokens de l'API LLM (ex: 6000 TPM limit)
+            lines.append(f"## Synthèse globale — {len(par_employe)} employé(s)")
+            lines.append("\nListe condensée des employés :")
+            for emp, data in par_employe.items():
+                lines.append(f"- **{emp}** : {data['total_jours']} jours travaillés sur les projets : {', '.join(data['projets'])}")
+
+    if par_projet and is_financial:
+        lines.append("\n## Synthèse par Projet")
+        lines.append("| Projet | Jours travaillés | Coût total | CA facturé (Budget) | Gain net | Marge de rentabilité | Retour sur investissement (ROI) |")
+        lines.append("| :--- | :---: | :---: | :---: | :---: | :---: | :---: |")
+        for proj, data in par_projet.items():
+            lines.append(
+                f"| **{proj}** | {data['total_jours']}j | {data['total_cout']:,.2f} Dhs | {data['ca']:,.2f} Dhs | {data['gain']:+,.2f} Dhs | {data['marge_pct']:.1f}% | {data['roi_pct']:.1f}% |"
+            )
+
+    # ── Registre des Collaborateurs (Détails RH) ──────────────────
+    has_meta = any(data.get("profil") or data.get("date_demarrage") for data in par_employe.values())
+    if has_meta:
+        lines.append("\n## Registre des Collaborateurs (Détails RH)")
+        lines.append("| Employé | Profil Professionnel | Date de Démarrage | Ancienneté | Localisation |")
+        lines.append("| :--- | :--- | :--- | :--- | :--- |")
+        for emp, data in par_employe.items():
+            lines.append(
+                f"| **{emp}** | {data.get('profil') or 'Non spécifié'} | {data.get('date_demarrage') or 'Non spécifiée'} | {data.get('anciennete') or 'Non spécifiée'} | {data.get('localisation') or 'Non spécifiée'} |"
+            )
+
+    if rentabilite and show_global_rentability and is_financial:
         lines.append("\n## Rentabilité Globale")
         lines.append(f"**Statut : {rentabilite['statut']}**")
         if "ca_facturable" in rentabilite:
@@ -288,3 +397,4 @@ def _build_synthese(
         lines.append(f"- Marge : {rentabilite['marge_pct']}%")
 
     return "\n".join(lines)
+

@@ -15,7 +15,7 @@ public class CorsConfig implements CorsConfigurationSource {
         CorsConfiguration config = new CorsConfiguration();
 
         // 🎯 1. Au lieu de "*", on nomme explicitement l'URL de ton Angular pour valider les Credentials
-        config.setAllowedOrigins(List.of("http://localhost:4200", "http://127.0.0.1:4200"));
+        config.setAllowedOrigins(List.of("http://localhost:4200", "http://127.0.0.1:4200", "http://localhost:4201", "http://127.0.0.1:4201"));
 
         // 🎯 2. On liste explicitement les méthodes acceptées (OPTIONS est obligatoire pour le Preflight !)
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));

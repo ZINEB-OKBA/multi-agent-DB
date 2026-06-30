@@ -299,6 +299,7 @@
     "MENU": {
       "DASHBOARD": "Tableau de bord",
       "DATA_BASE": "Base de données",
+      "STAFFING": "Staffing",
       "TICKET": "Ticket",
       "TICKET_MANAGEMENT": "Gestion des tickets",
       "PROJECTS": "Projets",

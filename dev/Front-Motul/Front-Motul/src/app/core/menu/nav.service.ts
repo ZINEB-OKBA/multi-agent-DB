@@ -80,6 +80,22 @@ export class NavService {
                 authorities: [RoleEnum.ROLE_AFFICHER_DATABASE]
             },
             {
+                path: '/staffing/',
+                icon: `ki-filled ki-people`,
+                title: 'MODULES.MENU.STAFFING',
+                type: 'sub',
+                children: [
+                    {
+                        path: '/staffing/',
+                        icon: `ki-filled ki-people`,
+                        title: 'MODULES.MENU.STAFFING',
+                        type: 'link',
+                        authorities: [RoleEnum.ROLE_AFFICHER_DATABASE]
+                    }
+                ],
+                authorities: [RoleEnum.ROLE_AFFICHER_DATABASE]
+            },
+            {
                 path: '/administration/utilisateurs/profile',
                 icon: `ki-filled ki-profile-circle`,
                 title: 'MODULES.PROFILES.TITLE',

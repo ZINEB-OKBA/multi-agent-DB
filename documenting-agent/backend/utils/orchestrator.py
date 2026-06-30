@@ -50,12 +50,14 @@ INTENT_PROMPT = ChatPromptTemplate.from_template(
 Ta mission est de router la question vers l'agent spécialisé le plus pertinent.
 
 ### CRITÈRES DE DÉCISION :
-- **staffing** : questions sur des employés, TJM, jours travaillés, coûts RH,
+- **staffing** : questions sur des employés, CJM, jours travaillés, coûts RH,
                  rentabilité d'une ressource humaine, occupation, gain/perte employé,
-                 ainsi que les listes d'employés/collaborateurs d'une année spécifique.
-                 Exemples : "combien a travaillé Jean ?", "TJM de Marie",
+                 projets du staffing (coût, budget, CA ou ROI par projet),
+                 ainsi que les listes d'employés/collaborateurs d'une année spécifique ou des projets.
+                 Exemples : "combien a travaillé Jean ?", "CJM de Marie",
                  "est-ce que cet employé est rentable ?", "occupation en mars",
-                 "cite les employés de l'année 2026", "liste des collaborateurs en 2024".
+                 "cite les employés de l'année 2026", "liste des collaborateurs en 2024",
+                 "ROI des projets", "présente les projets dans le barchart".
 - **excel** : données structurées, tableaux de chiffres, calculs financiers
                  NON liés aux ressources humaines.
 - **pdf** : explications de concepts, procédures, résumés de textes longs, salutations, 
@@ -80,7 +82,7 @@ def classify_intent(question: str, history: Optional[List[dict]] = None) -> Inte
         return "pdf"
         
     # 1.5 Routage forcé vers l'agent staffing si des mots-clés spécifiques au staffing sont présents
-    staffing_keywords = ["employe", "employé", "employer", "collaborateur", "tjm", "salaire", "rentabilité", "rentable", "jours", "staffing"]
+    staffing_keywords = ["employe", "employé", "employer", "collaborateur", "tjm", "cjm", "salaire", "rentabilité", "rentable", "jours", "staffing", "roi", "investissement", "gain", "perte", "coût", "cout", "budget", "projet", "projets"]
     if any(sk in lower_q for sk in staffing_keywords):
         logger.info("   → Mot-clé de staffing détecté dans la question. Routage forcé vers Staffing.")
         return "staffing"
@@ -93,7 +95,7 @@ def classify_intent(question: str, history: Optional[List[dict]] = None) -> Inte
     ]
     if any(kw in lower_q for kw in general_keywords) and any(kw2 in lower_q for kw2 in ["quel", "qu'est", "liste", "quoi", "exi", "y a"]):
         # Si la question porte sur des personnes, des employés ou des salaires, on ne route pas vers 'general'
-        if not any(emp_kw in lower_q for emp_kw in ["employe", "employé", "employer", "collaborateur", "qui", "nom", "salaire", "tjm"]):
+        if not any(emp_kw in lower_q for emp_kw in ["employe", "employé", "employer", "collaborateur", "qui", "nom", "salaire", "tjm", "cjm"]):
             logger.info("   → Intention identifiée comme requête générale de métadonnées.")
             return "general"
 
@@ -105,8 +107,18 @@ def classify_intent(question: str, history: Optional[List[dict]] = None) -> Inte
         for h in reversed(history):
             if h.get("role") == "user":
                 last_q = h.get("content", "").lower()
-                if any(k in last_q for k in ["employe", "employé", "collaborateur", "tjm", "salaire", "rentabilité", "rentable", "jours", "staffing"]):
+                if any(k in last_q for k in ["employe", "employé", "collaborateur", "tjm", "cjm", "salaire", "rentabilité", "rentable", "jours", "staffing"]):
                     logger.info("   → Demande de graphique sur le staffing détectée via le contexte historique.")
+                    return "staffing"
+
+    # 3.5 Routage contextuel des demandes d'explication ou de calcul liées au staffing
+    calc_keywords = ["calcul", "calcule", "calculer", "comment", "détail", "detail", "details", "détails", "explication", "explique", "équation", "equation", "pourquoi", "prq", "prc", "d'où", "dou", "formule", "montre"]
+    if any(ck in lower_q for ck in calc_keywords) and history:
+        for h in reversed(history):
+            if h.get("role") == "user":
+                last_q = h.get("content", "").lower()
+                if any(k in last_q for k in ["employe", "employé", "employer", "collaborateur", "tjm", "cjm", "salaire", "rentabilité", "rentable", "jours", "staffing", "roi", "coût", "cout", "budget"]):
+                    logger.info("   → Demande d'explication ou calcul sur le staffing détectée via le contexte historique.")
                     return "staffing"
 
     history_context = ""

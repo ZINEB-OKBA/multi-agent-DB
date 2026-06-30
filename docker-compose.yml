@@ -5,9 +5,9 @@ services:
   staffing_db:
     image: postgres:15
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
-      POSTGRES_DB: Motuldb
+      POSTGRES_DB: staffdb
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: Admin123
     volumes:
@@ -19,7 +19,7 @@ services:
   agentic_pgadmin:
     image: dpage/pgadmin4
     ports:
-      - "5054:80"
+      - "5055:80"
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin
@@ -34,9 +34,9 @@ services:
       context: ./documenting-agent
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "8001:8000"
     environment:
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost,http://localhost:4200,http://localhost:8080,http://localhost:8081}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost,http://localhost:4201,http://localhost:8080,http://localhost:8081}
       - GROQ_API_KEY=${GROQ_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - DATA_DIR=${DATA_DIR:-data}
@@ -44,7 +44,7 @@ services:
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-nomic-embed-text}
       - LLM_MODEL=${LLM_MODEL:-llama-3.3-70b-versatile}
       - DB_HOST=staffing_db
-      - DB_NAME=Motuldb
+      - DB_NAME=staffdb
       - DB_USER=postgres
       - DB_PASSWORD=Admin123
       - SPRING_BOOT_CALLBACK_URL=http://backend-web:8080/api/internal/documents/callback
@@ -52,6 +52,8 @@ services:
       - staffing_db
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    volumes:
+      - ./fastembed_cache:/tmp/fastembed_cache
     networks:
       - app_network
 
@@ -61,9 +63,9 @@ services:
       context: ./dev/backend/Backend-Motul
       dockerfile: Dockerfile
     ports:
-      - "8083:8080"
+      - "8084:8080"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://staffing_db:5432/Motuldb
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://staffing_db:5432/staffdb
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=Admin123
       - EXTERNAL_AI_URL=http://agentic_analytics_api:8000/api/chat/message
@@ -82,7 +84,7 @@ services:
       context: ./dev/Front-Motul/Front-Motul
       dockerfile: Dockerfile
     ports:
-      - "4200:80"
+      - "4201:80"
     depends_on:
       - backend-web
     networks:

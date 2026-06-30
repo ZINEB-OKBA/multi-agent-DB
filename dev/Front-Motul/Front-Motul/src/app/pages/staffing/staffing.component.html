@@ -1,0 +1,349 @@
+<div class="kt-container-fluid">
+    <!-- Main Title -->
+    <div class="mb-5">
+        <h2 class="text-2xl font-bold text-mono">Staffing Hub</h2>
+        <p class="text-sm text-secondary-foreground font-medium">Gérez vos collaborateurs, projets et imputations connectés directement à la base PostgreSQL.</p>
+    </div>
+
+    <!-- Navigation Tab Headers -->
+    <div class="flex items-center gap-6 border-b border-border pb-3 mb-6">
+        <button (click)="switchTab('collaborateurs')" 
+                [ngClass]="activeTab === 'collaborateurs' ? 'text-primary border-b-2 border-primary font-bold' : 'text-secondary-foreground hover:text-primary'"
+                class="pb-2 text-base transition-all">
+            Collaborateurs
+        </button>
+        <button (click)="switchTab('projets')" 
+                [ngClass]="activeTab === 'projets' ? 'text-primary border-b-2 border-primary font-bold' : 'text-secondary-foreground hover:text-primary'"
+                class="pb-2 text-base transition-all">
+            Projets
+        </button>
+        <button (click)="switchTab('imputations')" 
+                [ngClass]="activeTab === 'imputations' ? 'text-primary border-b-2 border-primary font-bold' : 'text-secondary-foreground hover:text-primary'"
+                class="pb-2 text-base transition-all">
+            Imputations
+        </button>
+    </div>
+
+    <!-- Tab Contents -->
+    
+    <!-- 1. COLLABORATEURS -->
+    <div *ngIf="activeTab === 'collaborateurs'">
+        <div class="flex items-center justify-between mb-5">
+            <div>
+                <h3 class="text-lg font-bold text-mono">Collaborateurs</h3>
+                <p class="text-sm text-secondary-foreground">{{ collaborators.length }} collaborateurs enregistrés</p>
+            </div>
+            <button class="kt-btn kt-btn-primary" (click)="openCollaboratorModal()">
+                <i class="ki-filled ki-plus"></i>
+                Ajouter collaborateur
+            </button>
+        </div>
+
+        <div class="kt-card kt-card-grid min-w-full">
+            <div class="kt-card-content">
+                <div class="kt-scrollable-x-auto">
+                    <table class="kt-table table-auto kt-table-border">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nom</th>
+                                <th>Prénom</th>
+                                <th>Date de Démarrage</th>
+                                <th>Profil Professionnel</th>
+                                <th>Ancienneté</th>
+                                <th>Salaire (MAD)</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngIf="isLoading">
+                                <td colspan="8" class="text-center py-10">
+                                    <i class="ki-filled ki-loading animate-spin text-xl text-secondary-foreground"></i>
+                                </td>
+                            </tr>
+                            <tr *ngFor="let collab of collaborators">
+                                <td class="text-sm text-secondary-foreground">{{ collab.id }}</td>
+                                <td class="font-medium">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                                            {{ getInitials(collab.nom, collab.prenom) }}
+                                        </div>
+                                        <span>{{ collab.nom }}</span>
+                                    </div>
+                                </td>
+                                <td>{{ collab.prenom }}</td>
+                                <td>{{ collab.dateDemarrage }}</td>
+                                <td>{{ collab.profilProfessionnel }}</td>
+                                <td>{{ collab.anciennete }}</td>
+                                <td class="font-bold">{{ collab.salaire | number }} MAD</td>
+                                <td class="text-center">
+                                    <div class="flex items-center justify-center gap-2">
+                                        <button class="btn btn-sm btn-icon btn-light" (click)="editCollaborator(collab)" title="Modifier">
+                                            <i class="ki-filled ki-pencil text-sm text-primary"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-icon btn-light" (click)="deleteCollaborator(collab.id)" title="Supprimer">
+                                            <i class="ki-filled ki-trash text-sm text-danger"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. PROJETS -->
+    <div *ngIf="activeTab === 'projets'">
+        <div class="flex items-center justify-between mb-5">
+            <div>
+                <h3 class="text-lg font-bold text-mono">Projets</h3>
+                <p class="text-sm text-secondary-foreground">{{ projects.length }} projets enregistrés</p>
+            </div>
+            <button class="kt-btn kt-btn-primary" (click)="openProjectModal()">
+                <i class="ki-filled ki-plus"></i>
+                Ajouter projet
+            </button>
+        </div>
+
+        <div class="kt-card kt-card-grid min-w-full">
+            <div class="kt-card-content">
+                <div class="kt-scrollable-x-auto">
+                    <table class="kt-table table-auto kt-table-border">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nom du Client</th>
+                                <th>Nom du Projet</th>
+                                <th>Date de Début</th>
+                                <th>Date de Fin</th>
+                                <th>Chiffre d'Affaires (MAD)</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngIf="isLoading">
+                                <td colspan="7" class="text-center py-10">
+                                    <i class="ki-filled ki-loading animate-spin text-xl text-secondary-foreground"></i>
+                                </td>
+                            </tr>
+                            <tr *ngFor="let proj of projects">
+                                <td class="text-sm text-secondary-foreground">{{ proj.id }}</td>
+                                <td>{{ proj.clientName }}</td>
+                                <td class="font-medium">
+                                    <div class="flex items-center gap-2">
+                                        <i class="ki-filled ki-folder text-primary text-sm"></i>
+                                        <span>{{ proj.name }}</span>
+                                    </div>
+                                </td>
+                                <td class="text-secondary-foreground text-sm">{{ proj.startDate }}</td>
+                                <td class="text-secondary-foreground text-sm">{{ proj.endDate }}</td>
+                                <td class="font-bold">{{ proj.turnover | number }} MAD</td>
+                                <td class="text-center">
+                                    <div class="flex items-center justify-center gap-2">
+                                        <button class="btn btn-sm btn-icon btn-light" (click)="editProject(proj)" title="Modifier">
+                                            <i class="ki-filled ki-pencil text-sm text-primary"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-icon btn-light" (click)="deleteProject(proj.id)" title="Supprimer">
+                                            <i class="ki-filled ki-trash text-sm text-danger"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. IMPUTATIONS -->
+    <div *ngIf="activeTab === 'imputations'">
+        <div class="flex items-center justify-between mb-5">
+            <div>
+                <h3 class="text-lg font-bold text-mono">Imputations</h3>
+                <p class="text-sm text-secondary-foreground">{{ imputations.length }} imputations enregistrées</p>
+            </div>
+            <button class="kt-btn kt-btn-primary" (click)="openImputationModal()">
+                <i class="ki-filled ki-plus"></i>
+                Ajouter imputation
+            </button>
+        </div>
+
+        <div class="kt-card kt-card-grid min-w-full">
+            <div class="kt-card-content">
+                <div class="kt-scrollable-x-auto">
+                    <table class="kt-table table-auto kt-table-border">
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Prénom</th>
+                                <th>Projet</th>
+                                <th>Mois</th>
+                                <th>Année</th>
+                                <th>Nbr jours</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngIf="isLoading">
+                                <td colspan="7" class="text-center py-10">
+                                    <i class="ki-filled ki-loading animate-spin text-xl text-secondary-foreground"></i>
+                                </td>
+                            </tr>
+                            <tr *ngFor="let imp of imputations">
+                                <td class="font-medium">{{ imp.nomCollaborateur }}</td>
+                                <td class="font-medium">{{ imp.prenomCollaborateur }}</td>
+                                <td>{{ imp.projet }}</td>
+                                <td>{{ imp.mois }}</td>
+                                <td>{{ imp.annee }}</td>
+                                <td class="font-bold">{{ imp.nbrJours }}</td>
+                                <td class="text-center">
+                                    <div class="flex items-center justify-center gap-2">
+                                        <button class="btn btn-sm btn-icon btn-light" (click)="editImputation(imp)" title="Modifier">
+                                            <i class="ki-filled ki-pencil text-sm text-primary"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-icon btn-light" (click)="deleteImputation(imp.id)" title="Supprimer">
+                                            <i class="ki-filled ki-trash text-sm text-danger"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ MODALE CRÉATION COLLABORATEUR ═══════════════════════════════════════ -->
+<div *ngIf="showCollaboratorModal" class="modal-backdrop show"></div>
+<div *ngIf="showCollaboratorModal" class="modal show block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-mono">Ajouter un Collaborateur</h5>
+                <button type="button" class="btn-close" (click)="closeCollaboratorModal()"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-4">
+                    <label class="form-label font-bold">Nom *</label>
+                    <input type="text" class="kt-input w-full" [(ngModel)]="collabForm.nom" placeholder="Ex: Chrabai">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label font-bold">Prénom *</label>
+                    <input type="text" class="kt-input w-full" [(ngModel)]="collabForm.prenom" placeholder="Ex: Hamza">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label font-bold">Date de Démarrage</label>
+                    <input type="text" class="kt-input w-full" [(ngModel)]="collabForm.dateDemarrage" placeholder="Ex: 2022-01-15">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label font-bold">Profil Professionnel</label>
+                    <input type="text" class="kt-input w-full" [(ngModel)]="collabForm.profilProfessionnel" placeholder="Ex: Développeur senior">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label font-bold">Ancienneté</label>
+                    <input type="text" class="kt-input w-full" [(ngModel)]="collabForm.anciennete" placeholder="Ex: 4 ans">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label font-bold">Salaire (MAD) *</label>
+                    <input type="number" class="kt-input w-full" [(ngModel)]="collabForm.salaire" min="0">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="kt-btn btn-light" (click)="closeCollaboratorModal()">Annuler</button>
+                <button type="button" class="kt-btn kt-btn-primary" (click)="saveCollaborator()">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ MODALE CRÉATION IMPUTATION ═══════════════════════════════════════════ -->
+<div *ngIf="showImputationModal" class="modal-backdrop show"></div>
+<div *ngIf="showImputationModal" class="modal show block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-mono">Ajouter une Imputation</h5>
+                <button type="button" class="btn-close" (click)="closeImputationModal()"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-4">
+                    <label class="form-label font-bold">Nom *</label>
+                    <input type="text" class="kt-input w-full" [(ngModel)]="imputationForm.nomCollaborateur" placeholder="Ex: Chrabai">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label font-bold">Prénom *</label>
+                    <input type="text" class="kt-input w-full" [(ngModel)]="imputationForm.prenomCollaborateur" placeholder="Ex: Hamza">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label font-bold">Projet *</label>
+                    <input type="text" class="kt-input w-full" [(ngModel)]="imputationForm.projet" placeholder="Ex: Projet Alpha">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label font-bold">Mois *</label>
+                    <input type="text" class="kt-input w-full" [(ngModel)]="imputationForm.mois" placeholder="Ex: 01, 02...">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label font-bold">Année *</label>
+                    <input type="text" class="kt-input w-full" [(ngModel)]="imputationForm.annee" placeholder="Ex: 2024">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label font-bold">Nombre de jours *</label>
+                    <input type="number" class="kt-input w-full" [(ngModel)]="imputationForm.nbrJours" min="0">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="kt-btn btn-light" (click)="closeImputationModal()">Annuler</button>
+                <button type="button" class="kt-btn kt-btn-primary" (click)="saveImputation()">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ MODALE CRÉATION PROJET ═══════════════════════════════════════════ -->
+<div *ngIf="showProjectModal" class="modal-backdrop show"></div>
+<div *ngIf="showProjectModal" class="modal show block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-mono">Ajouter un Projet</h5>
+                <button type="button" class="btn-close" (click)="closeProjectModal()"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-4">
+                    <label class="form-label font-bold">Nom du Projet *</label>
+                    <input type="text" class="kt-input w-full" [(ngModel)]="projectForm.name" placeholder="Ex: Projet Alpha">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label font-bold">Nom du Client *</label>
+                    <input type="text" class="kt-input w-full" [(ngModel)]="projectForm.clientName" placeholder="Ex: Client A">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label font-bold">Date de Début</label>
+                    <input type="text" class="kt-input w-full" [(ngModel)]="projectForm.startDate" placeholder="Ex: 2024-01-01">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label font-bold">Date de Fin</label>
+                    <input type="text" class="kt-input w-full" [(ngModel)]="projectForm.endDate" placeholder="Ex: 2024-12-31">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label font-bold">Chiffre d'Affaires (MAD)</label>
+                    <input type="number" class="kt-input w-full" [(ngModel)]="projectForm.turnover" min="0">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label font-bold">Description</label>
+                    <textarea class="kt-input w-full" [(ngModel)]="projectForm.description" placeholder="Ex: Description du projet..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="kt-btn btn-light" (click)="closeProjectModal()">Annuler</button>
+                <button type="button" class="kt-btn kt-btn-primary" (click)="saveProject()">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
