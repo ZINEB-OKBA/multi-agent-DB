@@ -21,8 +21,8 @@ export class StaffingComponent implements OnInit {
   showImputationModal = false;
   showProjectModal = false;
   
-  collabForm: Collaborator = { nom: '', prenom: '', dateDemarrage: '', profilProfessionnel: '', anciennete: '', salaire: 0 };
-  imputationForm: Imputation = { nomCollaborateur: '', prenomCollaborateur: '', projet: '', mois: '', annee: '2024', nbrJours: 0 };
+  collabForm: Collaborator = { collaborateur: '', dateDemarrage: '', profilProfessionnel: '', anciennete: '', salaire: 0 };
+  imputationForm: Imputation = { collaborateur: '', collaborateurId: undefined, projet: '', projetId: undefined, mois: '', annee: '2024', nbrJours: 0 };
   projectForm: Project = { name: '', description: '', clientName: '', startDate: '', endDate: '', turnover: 0 };
   
   constructor(private staffingService: StaffingService) {}
@@ -68,7 +68,7 @@ export class StaffingComponent implements OnInit {
   // Collaborators CRUD
   openCollaboratorModal(): void {
     this.showCollaboratorModal = true;
-    this.collabForm = { id: undefined, nom: '', prenom: '', dateDemarrage: '', profilProfessionnel: '', anciennete: '', salaire: 0 };
+    this.collabForm = { id: undefined, collaborateur: '', dateDemarrage: '', profilProfessionnel: '', anciennete: '', salaire: 0 };
   }
   
   closeCollaboratorModal(): void {
@@ -76,7 +76,7 @@ export class StaffingComponent implements OnInit {
   }
   
   saveCollaborator(): void {
-    if (!this.collabForm.nom || !this.collabForm.prenom || !this.collabForm.salaire) return;
+    if (!this.collabForm.collaborateur || !this.collabForm.salaire) return;
     this.staffingService.createCollaborator(this.collabForm).subscribe({
       next: () => {
         this.closeCollaboratorModal();
@@ -98,10 +98,36 @@ export class StaffingComponent implements OnInit {
     }
   }
   
+  loadAllForImputation(): void {
+    this.staffingService.getCollaborators().subscribe({
+      next: (res) => this.collaborators = res
+    });
+    this.staffingService.getProjects().subscribe({
+      next: (res) => this.projects = res
+    });
+  }
+
+  onCollaboratorChange(event: any): void {
+    const selectedId = Number(this.imputationForm.collaborateurId);
+    const selectedCollab = this.collaborators.find(c => c.id === selectedId);
+    if (selectedCollab) {
+      this.imputationForm.collaborateur = selectedCollab.collaborateur;
+    }
+  }
+
+  onProjectChange(event: any): void {
+    const selectedId = Number(this.imputationForm.projetId);
+    const selectedProj = this.projects.find(p => p.id === selectedId);
+    if (selectedProj) {
+      this.imputationForm.projet = selectedProj.name;
+    }
+  }
+
   // Imputations CRUD
   openImputationModal(): void {
     this.showImputationModal = true;
-    this.imputationForm = { id: undefined, nomCollaborateur: '', prenomCollaborateur: '', projet: '', mois: '', annee: '2024', nbrJours: 0 };
+    this.imputationForm = { id: undefined, collaborateur: '', collaborateurId: undefined, projet: '', projetId: undefined, mois: '', annee: '2024', nbrJours: 0 };
+    this.loadAllForImputation();
   }
   
   closeImputationModal(): void {
@@ -109,7 +135,7 @@ export class StaffingComponent implements OnInit {
   }
   
   saveImputation(): void {
-    if (!this.imputationForm.nomCollaborateur || !this.imputationForm.prenomCollaborateur || !this.imputationForm.projet || !this.imputationForm.mois || !this.imputationForm.nbrJours) return;
+    if (!this.imputationForm.collaborateurId || !this.imputationForm.projetId || !this.imputationForm.mois || !this.imputationForm.nbrJours) return;
     this.staffingService.createImputation(this.imputationForm).subscribe({
       next: () => {
         this.closeImputationModal();
@@ -120,6 +146,7 @@ export class StaffingComponent implements OnInit {
 
   editImputation(imp: Imputation): void {
     this.imputationForm = { ...imp };
+    this.loadAllForImputation();
     this.showImputationModal = true;
   }
   
@@ -165,7 +192,12 @@ export class StaffingComponent implements OnInit {
   }
 
   // Get Initials for Circle Avatar
-  getInitials(nom: string, prenom: string): string {
-    return ((prenom ? prenom[0] : '') + (nom ? nom[0] : '')).toUpperCase();
+  getInitials(collaborateur: string): string {
+    if (!collaborateur) return '';
+    const parts = collaborateur.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return parts[0][0].toUpperCase();
   }
 }

@@ -4,8 +4,7 @@ import { Observable } from 'rxjs';
 
 export interface Collaborator {
   id?: number;
-  nom: string;
-  prenom: string;
+  collaborateur: string;
   dateDemarrage: string;
   profilProfessionnel: string;
   anciennete: string;
@@ -14,9 +13,10 @@ export interface Collaborator {
 
 export interface Imputation {
   id?: number;
-  nomCollaborateur: string;
-  prenomCollaborateur: string;
+  collaborateur: string;
+  collaborateurId?: number;
   projet: string;
+  projetId?: number;
   mois: string;
   annee: string;
   nbrJours: number;

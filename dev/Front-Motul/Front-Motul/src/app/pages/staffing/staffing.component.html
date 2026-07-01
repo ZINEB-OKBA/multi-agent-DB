@@ -46,8 +46,7 @@
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Nom</th>
-                                <th>Prénom</th>
+                                <th>Collaborateur</th>
                                 <th>Date de Démarrage</th>
                                 <th>Profil Professionnel</th>
                                 <th>Ancienneté</th>
@@ -57,7 +56,7 @@
                         </thead>
                         <tbody>
                             <tr *ngIf="isLoading">
-                                <td colspan="8" class="text-center py-10">
+                                <td colspan="7" class="text-center py-10">
                                     <i class="ki-filled ki-loading animate-spin text-xl text-secondary-foreground"></i>
                                 </td>
                             </tr>
@@ -66,12 +65,11 @@
                                 <td class="font-medium">
                                     <div class="flex items-center gap-3">
                                         <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                                            {{ getInitials(collab.nom, collab.prenom) }}
+                                            {{ getInitials(collab.collaborateur) }}
                                         </div>
-                                        <span>{{ collab.nom }}</span>
+                                        <span>{{ collab.collaborateur }}</span>
                                     </div>
                                 </td>
-                                <td>{{ collab.prenom }}</td>
                                 <td>{{ collab.dateDemarrage }}</td>
                                 <td>{{ collab.profilProfessionnel }}</td>
                                 <td>{{ collab.anciennete }}</td>
@@ -177,8 +175,7 @@
                     <table class="kt-table table-auto kt-table-border">
                         <thead>
                             <tr>
-                                <th>Nom</th>
-                                <th>Prénom</th>
+                                <th>Collaborateur</th>
                                 <th>Projet</th>
                                 <th>Mois</th>
                                 <th>Année</th>
@@ -188,13 +185,12 @@
                         </thead>
                         <tbody>
                             <tr *ngIf="isLoading">
-                                <td colspan="7" class="text-center py-10">
+                                <td colspan="6" class="text-center py-10">
                                     <i class="ki-filled ki-loading animate-spin text-xl text-secondary-foreground"></i>
                                 </td>
                             </tr>
                             <tr *ngFor="let imp of imputations">
-                                <td class="font-medium">{{ imp.nomCollaborateur }}</td>
-                                <td class="font-medium">{{ imp.prenomCollaborateur }}</td>
+                                <td class="font-medium">{{ imp.collaborateur }}</td>
                                 <td>{{ imp.projet }}</td>
                                 <td>{{ imp.mois }}</td>
                                 <td>{{ imp.annee }}</td>
@@ -229,12 +225,8 @@
             </div>
             <div class="modal-body">
                 <div class="mb-4">
-                    <label class="form-label font-bold">Nom *</label>
-                    <input type="text" class="kt-input w-full" [(ngModel)]="collabForm.nom" placeholder="Ex: Chrabai">
-                </div>
-                <div class="mb-4">
-                    <label class="form-label font-bold">Prénom *</label>
-                    <input type="text" class="kt-input w-full" [(ngModel)]="collabForm.prenom" placeholder="Ex: Hamza">
+                    <label class="form-label font-bold">Collaborateur *</label>
+                    <input type="text" class="kt-input w-full" [(ngModel)]="collabForm.collaborateur" placeholder="Ex: Chrabai Hamza">
                 </div>
                 <div class="mb-4">
                     <label class="form-label font-bold">Date de Démarrage</label>
@@ -272,16 +264,18 @@
             </div>
             <div class="modal-body">
                 <div class="mb-4">
-                    <label class="form-label font-bold">Nom *</label>
-                    <input type="text" class="kt-input w-full" [(ngModel)]="imputationForm.nomCollaborateur" placeholder="Ex: Chrabai">
-                </div>
-                <div class="mb-4">
-                    <label class="form-label font-bold">Prénom *</label>
-                    <input type="text" class="kt-input w-full" [(ngModel)]="imputationForm.prenomCollaborateur" placeholder="Ex: Hamza">
+                    <label class="form-label font-bold">Collaborateur *</label>
+                    <select class="kt-input w-full" [(ngModel)]="imputationForm.collaborateurId" (change)="onCollaboratorChange($event)">
+                        <option [value]="undefined" disabled>Sélectionner un collaborateur</option>
+                        <option *ngFor="let c of collaborators" [value]="c.id">{{ c.collaborateur }}</option>
+                    </select>
                 </div>
                 <div class="mb-4">
                     <label class="form-label font-bold">Projet *</label>
-                    <input type="text" class="kt-input w-full" [(ngModel)]="imputationForm.projet" placeholder="Ex: Projet Alpha">
+                    <select class="kt-input w-full" [(ngModel)]="imputationForm.projetId" (change)="onProjectChange($event)">
+                        <option [value]="undefined" disabled>Sélectionner un projet</option>
+                        <option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</option>
+                    </select>
                 </div>
                 <div class="mb-4">
                     <label class="form-label font-bold">Mois *</label>

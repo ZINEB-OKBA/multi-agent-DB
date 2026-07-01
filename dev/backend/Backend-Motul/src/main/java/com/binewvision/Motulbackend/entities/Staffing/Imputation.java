@@ -12,14 +12,17 @@ public class Imputation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "nom_collaborateur", nullable = false, length = 100)
-    private String nomCollaborateur;
+    @Column(nullable = false, length = 200)
+    private String collaborateur;
 
-    @Column(name = "prenom_collaborateur", nullable = false, length = 100)
-    private String prenomCollaborateur;
+    @Column(name = "collaborateur_id")
+    private Long collaborateurId;
 
     @Column(nullable = false, length = 100)
     private String projet;
+
+    @Column(name = "projet_id")
+    private Long projetId;
 
     @Column(nullable = false, length = 10)
     private String mois;
