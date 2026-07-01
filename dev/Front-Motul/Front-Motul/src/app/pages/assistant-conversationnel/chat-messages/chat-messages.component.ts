@@ -372,6 +372,16 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
     });
   }
 
+  scrollToTop(): void {
+    if (!this.chatContainer) return;
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        const el = this.chatContainer.nativeElement;
+        el.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 50);
+    });
+  }
+
   onScroll(_event: any): void { this.checkScrollPosition(); }
 
   checkScrollPosition(): void {

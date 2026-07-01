@@ -283,4 +283,22 @@
         </form>
     </div>
 
+    <!-- Floating scroll buttons -->
+    <div style="position: absolute; bottom: 85px; right: 24px; display: flex; flex-direction: column; gap: 8px; z-index: 50;">
+        <button type="button" 
+                (click)="scrollToTop()" 
+                class="btn btn-sm btn-icon"
+                style="border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; background-color: #6b8e23; border: 1px solid #6b8e23; box-shadow: 0 4px 12px rgba(0,0,0,0.15); cursor: pointer;"
+                title="Retourner en haut">
+            <i class="ki-filled ki-up text-base" style="color: #ffffff !important;"></i>
+        </button>
+        <button type="button" 
+                (click)="scrollToBottom()" 
+                class="btn btn-sm btn-icon"
+                style="border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; background-color: #6b8e23; border: 1px solid #6b8e23; box-shadow: 0 4px 12px rgba(0,0,0,0.15); cursor: pointer;"
+                title="Aller en bas">
+            <i class="ki-filled ki-down text-base" style="color: #ffffff !important;"></i>
+        </button>
+    </div>
+
 </div>
