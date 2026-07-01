@@ -30,8 +30,188 @@ from utils.llm_factory          import get_llm
 from langchain_core.prompts         import ChatPromptTemplate
 from langchain_core.output_parsers  import StrOutputParser
 
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import os
+import json
+
 logger = logging.getLogger(__name__)
 
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_NAME = os.getenv("DB_NAME", "staffdb")
+DB_USER = os.getenv("DB_USER", "postgres")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "Admin123")
+
+def run_nl_to_sql(question: str) -> Dict[str, Any]:
+    logger.info(f"🔍 NL-to-SQL - Question : {question}")
+    
+    sql_generation_prompt = ChatPromptTemplate.from_template(
+        """Tu es un traducteur de langage naturel en requêtes SQL PostgreSQL (NL-to-SQL) expert.
+Génère une requête SQL PostgreSQL valide, optimisée et sécurisée pour répondre à la question de l'utilisateur.
+
+### TABLES DISPONIBLES ET LEUR SCHÉMA :
+
+1. Table **public.collaborateurs** (contient les informations sur les employés/collaborateurs) :
+   - `id` (SERIAL PRIMARY KEY)
+   - `collaborateur` (VARCHAR(200)) : Nom complet du collaborateur (ex: "Chrabai Hamza", "Alami Sara")
+   - `date_demarrage` (VARCHAR(50)) : Date de début de travail
+   - `profil_professionnel` (VARCHAR(200)) : Poste (ex: "Développeur senior")
+   - `anciennete` (VARCHAR(50)) : Ancienneté (ex: "4 ans")
+   - `salaire` (DOUBLE PRECISION) : Salaire mensuel en Dhs (Dirhams)
+
+2. Table **public.projects** (contient les informations sur les projets) :
+   - `id` (SERIAL PRIMARY KEY)
+   - `name` (VARCHAR(100) UNIQUE) : Nom du projet (ex: "Projet Alpha")
+   - `description` (VARCHAR(500)) : Description optionnelle
+   - `client_name` (VARCHAR(150)) : Nom du client (ex: "Client A")
+   - `start_date` (VARCHAR(50)) : Date de début
+   - `end_date` (VARCHAR(50)) : Date de fin
+   - `turnover` (DOUBLE PRECISION) : Chiffre d'affaires en Dhs
+
+3. Table **public.imputations** (contient le temps de travail imputé sur les projets) :
+   - `id` (SERIAL PRIMARY KEY)
+   - `collaborateur` (VARCHAR(200)) : Nom complet du collaborateur (pour affichage)
+   - `collaborateur_id` (INT) : Clé étrangère vers public.collaborateurs(id)
+   - `projet` (VARCHAR(100)) : Nom du projet (pour affichage)
+   - `projet_id` (INT) : Clé étrangère vers public.projects(id)
+   - `mois` (VARCHAR(10)) : Mois (ex: "01", "02")
+   - `annee` (VARCHAR(10)) : Année (ex: "2024")
+   - `nbr_jours` (INTEGER) : Nombre de jours travaillés
+
+### FORMULES MÉTIEZ À UTILISER DANS TES CALCULS SQL :
+- **CJM (Coût Journalier Moyen)** d'un collaborateur : `CJM = salaire / 21.0`.
+- **Coût d'un collaborateur sur un projet** (pour une ou plusieurs imputations) : `Coût = nbr_jours * (salaire / 21.0)`.
+- **Coût total d'un projet** (cumul de tous les collaborateurs ayant travaillé dessus) : `SUM(imputations.nbr_jours * (collaborateurs.salaire / 21.0))`.
+- **Gain net d'un projet** (rentabilité) : `Gain Net = projets.turnover - Coût total du projet`.
+- **Marge de rentabilité d'un projet** : `(Gain Net / projets.turnover) * 100`.
+- **Retour sur investissement (ROI) d'un projet** : `(Gain Net / Coût total du projet) * 100`.
+
+### RÈGLES STRICTES DE GÉNÉRATION :
+1. Génère UNIQUEMENT la requête SQL PostgreSQL brute. Ne mets pas de commentaires, pas de blocs de code markdown (comme ```sql ... ```), pas d'explications. Ta réponse doit commencer directement par un mot-clé SQL (SELECT, etc.).
+2. Fais très attention aux jointures : utilise `collaborateur_id` pour joindre avec `collaborateurs.id` et `projet_id` pour joindre avec `projects.id`.
+3. N'utilise que des requêtes de lecture (SELECT). Il est strictement interdit de faire des INSERT, UPDATE, DELETE, DROP ou ALTER.
+4. Si la question demande un calcul (somme, moyenne, etc.), utilise les fonctions d'agrégation appropriées (SUM, AVG, COUNT, MAX, MIN).
+5. Pour le nom complet du collaborateur, utilise toujours la colonne `collaborateur`.
+6. Si la question n'a pas de sens ou ne concerne pas ces tables, ou s'il s'agit d'une simple salutation (ex: "bonjour"), écris simplement une réponse textuelle polie ou `NONE`.
+7. Pour la recherche de noms de personnes composés de plusieurs mots (ex: "ahmed elhajjami" alors que la BDD contient "elhajjami ahmed"), ne cherche jamais le nom en une seule chaîne. Sépare obligatoirement chaque mot du nom dans des conditions `ILIKE` distinctes combinées par `AND` (ex: `collaborateur ILIKE '%ahmed%' AND collaborateur ILIKE '%elhajjami%'`). Cela permet d'être totalement insensible à l'ordre des prénoms/noms saisis par l'utilisateur.
+8. REGLE GROUP BY (POSTGRESQL) : Dans toute requête contenant un `GROUP BY`, toutes les colonnes sélectionnées dans le `SELECT` ou utilisées dans le `ORDER BY` qui ne sont pas des fonctions d'agrégation (comme `SUM`, `AVG`, `MAX`) doivent impérativement être incluses dans la clause `GROUP BY` (ex: `SELECT c.collaborateur, c.salaire ... GROUP BY c.collaborateur, c.salaire`).
+
+QUESTION DE L'UTILISATEUR : {question}
+REQUÊTE SQL :"""
+    )
+    
+    try:
+        llm = get_llm(temperature=0.0, max_tokens=500)
+        chain = sql_generation_prompt | llm | StrOutputParser()
+        sql_query = chain.invoke({"question": question}).strip()
+        
+        # Nettoyer d'éventuels markdown enrobants
+        sql_query = sql_query.replace("```sql", "").replace("```", "").strip()
+        
+        logger.info(f"Generated SQL Query: {sql_query}")
+        
+        if not sql_query or not sql_query.upper().startswith("SELECT"):
+            if not sql_query or sql_query.upper() == "NONE":
+                return {"answer": "Je ne peux pas répondre à cette question en interrogeant la base de données de staffing.", "agent_used": "Agent Staffing (NL-to-SQL)", "charts": [], "sources": []}
+            return {"answer": sql_query, "agent_used": "Agent Staffing (Conversationnel)", "charts": [], "sources": []}
+            
+        # 2. Exécution de la requête SQL
+        conn = psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASSWORD)
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute(sql_query)
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        # Formater les résultats
+        results_str = json.dumps(rows, indent=2, default=str)
+        
+        # 3. Synthèse en langage naturel
+        sql_synthesis_prompt = ChatPromptTemplate.from_template(
+            """Tu es un analyste financier et RH expert.
+Rédige une réponse en français claire, concise et professionnelle à partir des données extraites de la base de données PostgreSQL suite à la question de l'utilisateur.
+
+Question de l'utilisateur : {question}
+Requête SQL exécutée : {sql_query}
+Résultats de la requête SQL :
+{sql_results}
+
+RÈGLES DE RÉPONSE :
+1. Réponds directement et précisément à la question.
+2. Formate les résultats sous forme de tableau Markdown ou de liste à puces si cela améliore la lisibilité.
+3. Exprime toutes les valeurs monétaires en Dirhams ("Dh" ou "Dhs").
+4. Si aucun résultat n'est retourné, explique-le poliment.
+5. Ne mentionne pas de détails techniques internes comme "la base de données" ou "la requête SQL" sauf si explicitement demandé.
+
+RÉPONSE :"""
+        )
+        
+        synthesis_chain = sql_synthesis_prompt | llm | StrOutputParser()
+        answer = synthesis_chain.invoke({
+            "question": question,
+            "sql_query": sql_query,
+            "sql_results": results_str
+        })
+        
+        # Générer des graphiques dynamiquement si les données s'y prêtent
+        charts = []
+        try:
+            if len(rows) > 1:
+                import pandas as pd
+                from decimal import Decimal
+                df = pd.DataFrame(rows)
+                
+                # Convertir les Decimal (générés par PostgreSQL Numeric) en float pour que Pandas les détecte comme numériques
+                for col in df.columns:
+                    try:
+                        df[col] = df[col].apply(lambda x: float(x) if isinstance(x, Decimal) else x)
+                    except:
+                        pass
+                
+                # Exclure les IDs et clés étrangères des calculs et axes
+                numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+                numeric_cols = [c for c in numeric_cols if not c.endswith('_id') and c != 'id']
+                
+                categorical_cols = df.select_dtypes(include=['object', 'category', 'datetime']).columns.tolist()
+                categorical_cols = [c for c in categorical_cols if c not in ['mois', 'annee']] + [c for c in categorical_cols if c in ['mois', 'annee']]
+                
+                if numeric_cols and categorical_cols:
+                    chart_type = "bar"
+                    question_lower = question.lower()
+                    if any(w in question_lower for w in ["camembert", "pie", "répartition", "repartition", "proportion"]):
+                        chart_type = "pie"
+                    elif any(w in question_lower for w in ["ligne", "line", "courbe", "évolution", "evolution", "tendance"]):
+                        chart_type = "line"
+                        
+                    from utils.staffing_charts import generate_plotly_json, decode_plotly_bdata
+                    x_col = categorical_cols[0]
+                    y_col = numeric_cols[0]
+                    
+                    # Rendre le titre joli
+                    title_friendly = f"Analyse : {y_col.capitalize()} par {x_col.capitalize()}"
+                    
+                    plotly_str = generate_plotly_json(df, chart_type, "light", x_col=x_col, y_col=y_col)
+                    plotly_dict = json.loads(plotly_str)
+                    plotly_dict = decode_plotly_bdata(plotly_dict)
+                    
+                    charts.append({
+                        "title": title_friendly,
+                        "type": chart_type,
+                        "plotly": plotly_dict
+                    })
+                    logger.info("📊 Graphique dynamique généré avec succès depuis les résultats SQL !")
+        except Exception as chart_err:
+            logger.error(f"Erreur lors de la génération automatique du graphique SQL : {chart_err}")
+            
+        return {
+            "answer": answer,
+            "agent_used": "Agent Staffing (NL-to-SQL)",
+            "charts": charts,
+            "sources": [{"fileName": "Base de données (staffdb)", "pages": None, "extractCount": len(rows)}]
+        }
+    except Exception as e:
+        logger.error(f"Error in run_nl_to_sql: {e}")
+        return {"error": f"Erreur lors de la requête SQL : {str(e)}", "answer": f"Désolé, je n'ai pas pu récupérer ces informations. (Erreur : {str(e)})"}
 
 # ══════════════════════════════════════════════════════════════════
 # PROMPT LLM STAFFING
@@ -117,6 +297,20 @@ def run_staffing_agent(
     }
     """
     result = {"answer": "", "charts": [], "sources": [], "error": None}
+
+    # ── 0. Moteur NL-to-SQL Fallback / Direct Query ────────────────
+    lower_q = question.lower()
+    db_keywords = ["salaire", "salaires", "employe", "employés", "collaborateur", "collaborateurs", "projet", "projets", "imputations", "combien de", "liste des", "qui est", "tous les"]
+    is_db_query = any(kw in lower_q for kw in db_keywords)
+    
+    if not docs_raw or is_db_query:
+        logger.info("🤖 Routage vers le moteur NL-to-SQL (PostgreSQL)")
+        sql_res = run_nl_to_sql(question)
+        if not sql_res.get("error"):
+            return sql_res
+        if not docs_raw:
+            return sql_res
+        logger.warning("⚠️ NL-to-SQL a échoué. Fallback vers le traitement par fichiers.")
 
     # ── 1. Extraire les données de tous les fichiers ──────────────
     all_records: List[Dict[str, Any]] = []

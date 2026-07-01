@@ -26,16 +26,16 @@ public class Project {
     @Column(length = 500)
     private String description;
 
-    @Column(name = "client_name", length = 150)
+    @Column(name = "client_name", nullable = false, length = 150)
     private String clientName;
 
-    @Column(name = "start_date", length = 50)
+    @Column(name = "start_date", nullable = false, length = 50)
     private String startDate;
 
-    @Column(name = "end_date", length = 50)
+    @Column(name = "end_date", nullable = false, length = 50)
     private String endDate;
 
-    @Column(name = "turnover")
+    @Column(name = "turnover", nullable = false)
     private Double turnover;
 
     @CreationTimestamp

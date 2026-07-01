@@ -15,13 +15,13 @@ public class Collaborator {
     @Column(nullable = false, length = 200)
     private String collaborateur;
 
-    @Column(name = "date_demarrage", length = 50)
+    @Column(name = "date_demarrage", nullable = false, length = 50)
     private String dateDemarrage;
 
-    @Column(name = "profil_professionnel", length = 200)
+    @Column(name = "profil_professionnel", nullable = false, length = 200)
     private String profilProfessionnel;
 
-    @Column(length = 50)
+    @Column(nullable = false, length = 50)
     private String anciennete;
 
     @Column(nullable = false)

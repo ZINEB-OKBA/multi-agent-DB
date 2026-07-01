@@ -55,6 +55,12 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
   protected form!: FormGroup;
   private charts: Record<string, Chart> = {};
   private pendingScroll = false;
+  
+  isStaffingAgentMode  = false;
+  
+  setStaffingMode(mode: boolean): void {
+    this.isStaffingAgentMode = mode;
+  }
 
   // ── 2. PROPRIÉTÉ POUR LE SPINNER DE TÉLÉCHARGEMENT DES SOURCES ─────────────
   downloadingSource: string | null = null;
@@ -135,7 +141,7 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
   sendMessage(): void {
     const question = (this.form.get('content')?.value || '').trim();
 
-    if (!question || !this.selectedProject) return;
+    if (!question || (!this.isStaffingAgentMode && !this.selectedProject)) return;
 
     this.messages.push({ content: question, sendBy: 'USER' });
     this.pendingScroll = true;
@@ -144,7 +150,7 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
 
     const payload: any = {
       content: question,
-      project: this.selectedProject
+      project: this.isStaffingAgentMode ? 'staffing' : this.selectedProject
     };
 
     if (this.conversation?.id) {

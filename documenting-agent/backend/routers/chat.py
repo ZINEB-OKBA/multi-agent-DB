@@ -71,8 +71,20 @@ def _extract_project_id(project_str: str) -> int:
     Résout l'ID d'un projet de manière ultra-souple.
     Gère les ID bruts, les noms partiels, la casse et les tirets.
     """
-    if not project_str:
-        raise HTTPException(status_code=400, detail="Le nom du projet ne peut pas être vide.")
+    if not project_str or project_str.strip() == "" or project_str.lower() in ("default", "none", "null", "undefined", "staffing"):
+        try:
+            conn = psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASSWORD)
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM projects ORDER BY id ASC LIMIT 1;")
+            result = cursor.fetchone()
+            cursor.close()
+            conn.close()
+            if result:
+                logger.info(f"⚡ [Default Project] Aucun projet sélectionné. Choix automatique du premier projet ID: {result[0]}")
+                return result[0]
+        except Exception as e:
+            logger.error(f"❌ Erreur lors de la récupération du projet par défaut : {e}")
+        raise HTTPException(status_code=400, detail="Le nom du projet ne peut pas être vide et aucun projet par défaut n'a été trouvé.")
         
     project_str = project_str.strip()
     
@@ -124,6 +136,10 @@ async def chat_rest(body: ChatRequest):
         raise HTTPException(status_code=400, detail="La question ne peut pas être vide.")
 
     project_id = _extract_project_id(body.project)
+    
+    force_agent = body.force_agent
+    if body.project and body.project.lower() == "staffing":
+        force_agent = "staffing"
 
     try:
         from utils.orchestrator import get_project_resources
@@ -132,7 +148,7 @@ async def chat_rest(body: ChatRequest):
         result = orchestrate(
             question=question,
             project_id=project_id,
-            force_agent=body.force_agent,
+            force_agent=force_agent,
             history=body.history,
             theme_mode=body.theme_mode,
         )

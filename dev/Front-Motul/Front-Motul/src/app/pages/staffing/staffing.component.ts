@@ -21,10 +21,53 @@ export class StaffingComponent implements OnInit {
   showImputationModal = false;
   showProjectModal = false;
   
+  collabSubmitted = false;
+  imputationSubmitted = false;
+  projectSubmitted = false;
+  
   collabForm: Collaborator = { collaborateur: '', dateDemarrage: '', profilProfessionnel: '', anciennete: '', salaire: 0 };
   imputationForm: Imputation = { collaborateur: '', collaborateurId: undefined, projet: '', projetId: undefined, mois: '', annee: '2024', nbrJours: 0 };
   projectForm: Project = { name: '', description: '', clientName: '', startDate: '', endDate: '', turnover: 0 };
   
+  searchTerm = '';
+
+  get filteredCollaborators(): Collaborator[] {
+    if (!this.searchTerm.trim()) return this.collaborators;
+    const term = this.searchTerm.toLowerCase().trim();
+    return this.collaborators.filter(c => 
+      (c.collaborateur || '').toLowerCase().includes(term) ||
+      (c.profilProfessionnel || '').toLowerCase().includes(term) ||
+      (c.anciennete || '').toLowerCase().includes(term) ||
+      (c.dateDemarrage || '').toLowerCase().includes(term) ||
+      String(c.salaire || '').includes(term)
+    );
+  }
+
+  get filteredProjects(): Project[] {
+    if (!this.searchTerm.trim()) return this.projects;
+    const term = this.searchTerm.toLowerCase().trim();
+    return this.projects.filter(p => 
+      (p.name || '').toLowerCase().includes(term) ||
+      (p.description || '').toLowerCase().includes(term) ||
+      (p.clientName || '').toLowerCase().includes(term) ||
+      (p.startDate || '').toLowerCase().includes(term) ||
+      (p.endDate || '').toLowerCase().includes(term) ||
+      String(p.turnover || '').includes(term)
+    );
+  }
+
+  get filteredImputations(): Imputation[] {
+    if (!this.searchTerm.trim()) return this.imputations;
+    const term = this.searchTerm.toLowerCase().trim();
+    return this.imputations.filter(i => 
+      (i.collaborateur || '').toLowerCase().includes(term) ||
+      (i.projet || '').toLowerCase().includes(term) ||
+      (i.mois || '').toLowerCase().includes(term) ||
+      (i.annee || '').toLowerCase().includes(term) ||
+      String(i.nbrJours || '').includes(term)
+    );
+  }
+
   constructor(private staffingService: StaffingService) {}
   
   ngOnInit(): void {
@@ -62,12 +105,14 @@ export class StaffingComponent implements OnInit {
   
   switchTab(tab: 'collaborateurs' | 'projets' | 'imputations'): void {
     this.activeTab = tab;
+    this.searchTerm = '';
     this.loadData();
   }
   
   // Collaborators CRUD
   openCollaboratorModal(): void {
     this.showCollaboratorModal = true;
+    this.collabSubmitted = false;
     this.collabForm = { id: undefined, collaborateur: '', dateDemarrage: '', profilProfessionnel: '', anciennete: '', salaire: 0 };
   }
   
@@ -76,7 +121,8 @@ export class StaffingComponent implements OnInit {
   }
   
   saveCollaborator(): void {
-    if (!this.collabForm.collaborateur || !this.collabForm.salaire) return;
+    this.collabSubmitted = true;
+    if (!this.collabForm.collaborateur || !this.collabForm.dateDemarrage || !this.collabForm.profilProfessionnel || !this.collabForm.anciennete || !this.collabForm.salaire) return;
     this.staffingService.createCollaborator(this.collabForm).subscribe({
       next: () => {
         this.closeCollaboratorModal();
@@ -87,6 +133,7 @@ export class StaffingComponent implements OnInit {
 
   editCollaborator(collab: Collaborator): void {
     this.collabForm = { ...collab };
+    this.collabSubmitted = false;
     this.showCollaboratorModal = true;
   }
   
@@ -126,6 +173,7 @@ export class StaffingComponent implements OnInit {
   // Imputations CRUD
   openImputationModal(): void {
     this.showImputationModal = true;
+    this.imputationSubmitted = false;
     this.imputationForm = { id: undefined, collaborateur: '', collaborateurId: undefined, projet: '', projetId: undefined, mois: '', annee: '2024', nbrJours: 0 };
     this.loadAllForImputation();
   }
@@ -135,7 +183,8 @@ export class StaffingComponent implements OnInit {
   }
   
   saveImputation(): void {
-    if (!this.imputationForm.collaborateurId || !this.imputationForm.projetId || !this.imputationForm.mois || !this.imputationForm.nbrJours) return;
+    this.imputationSubmitted = true;
+    if (!this.imputationForm.collaborateurId || !this.imputationForm.projetId || !this.imputationForm.mois || !this.imputationForm.annee || !this.imputationForm.nbrJours) return;
     this.staffingService.createImputation(this.imputationForm).subscribe({
       next: () => {
         this.closeImputationModal();
@@ -146,6 +195,7 @@ export class StaffingComponent implements OnInit {
 
   editImputation(imp: Imputation): void {
     this.imputationForm = { ...imp };
+    this.imputationSubmitted = false;
     this.loadAllForImputation();
     this.showImputationModal = true;
   }
@@ -161,6 +211,7 @@ export class StaffingComponent implements OnInit {
   // Projects CRUD
   openProjectModal(): void {
     this.showProjectModal = true;
+    this.projectSubmitted = false;
     this.projectForm = { id: undefined, name: '', description: '', clientName: '', startDate: '', endDate: '', turnover: 0 };
   }
 
@@ -169,7 +220,8 @@ export class StaffingComponent implements OnInit {
   }
 
   saveProject(): void {
-    if (!this.projectForm.name || !this.projectForm.clientName) return;
+    this.projectSubmitted = true;
+    if (!this.projectForm.name || !this.projectForm.clientName || !this.projectForm.startDate || !this.projectForm.endDate || !this.projectForm.turnover) return;
     this.staffingService.createProject(this.projectForm).subscribe({
       next: () => {
         this.closeProjectModal();
@@ -180,6 +232,7 @@ export class StaffingComponent implements OnInit {
 
   editProject(proj: Project): void {
     this.projectForm = { ...proj };
+    this.projectSubmitted = false;
     this.showProjectModal = true;
   }
 

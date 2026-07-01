@@ -530,11 +530,6 @@ def orchestrate(
             # Lire depuis staffing_documents (pas documents) — tout en RAM depuis PostgreSQL
             docs_raw = get_staffing_docs_raw_from_postgres(project_id)
 
-            if not docs_raw:
-                result["error"] = "⚠️ Aucun fichier dans staffing_documents pour ce projet."
-                result["answer"] = result["error"]
-                return result
-
             staffing_result = run_staffing_agent(
                 question=question,
                 docs_raw=docs_raw,
@@ -546,7 +541,7 @@ def orchestrate(
                 result["error"] = staffing_result["error"]
                 result["answer"] = staffing_result["error"]
             else:
-                result["agent_used"] = "Agent Staffing (Base64 PostgreSQL → RAM → Calculs → Graphiques)"
+                result["agent_used"] = staffing_result.get("agent_used", "Agent Staffing (Base64 PostgreSQL → RAM → Calculs → Graphiques)")
                 result["answer"] = staffing_result["answer"]
                 result["docs"] = []
                 result["charts"] = staffing_result.get("charts", [])

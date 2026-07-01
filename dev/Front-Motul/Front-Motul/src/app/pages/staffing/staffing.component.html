@@ -24,6 +24,24 @@
         </button>
     </div>
 
+    <!-- Search Bar -->
+    <div style="max-width: 400px; margin-top: 15px; margin-bottom: 25px;">
+        <div style="position: relative; display: flex; align-items: center;">
+            <i class="ki-filled ki-magnifier" style="position: absolute; left: 12px; font-size: 16px; color: #7e8299; pointer-events: none;"></i>
+            <input type="text" 
+                   [(ngModel)]="searchTerm" 
+                   class="kt-input"
+                   style="width: 100%; padding-left: 38px; padding-right: 38px; height: 38px; border-radius: 8px; border: 1px solid #dbdfe9;"
+                   placeholder="Rechercher par nom, profil, etc..." />
+            <button *ngIf="searchTerm" 
+                    (click)="searchTerm = ''" 
+                    class="btn btn-sm btn-icon btn-clear"
+                    style="position: absolute; right: 10px; border: none; background: transparent; cursor: pointer; color: #7e8299; display: flex; align-items: center; justify-content: center;">
+                <i class="ki-filled ki-cross text-sm"></i>
+            </button>
+        </div>
+    </div>
+
     <!-- Tab Contents -->
     
     <!-- 1. COLLABORATEURS -->
@@ -60,7 +78,7 @@
                                     <i class="ki-filled ki-loading animate-spin text-xl text-secondary-foreground"></i>
                                 </td>
                             </tr>
-                            <tr *ngFor="let collab of collaborators">
+                             <tr *ngFor="let collab of filteredCollaborators">
                                 <td class="text-sm text-secondary-foreground">{{ collab.id }}</td>
                                 <td class="font-medium">
                                     <div class="flex items-center gap-3">
@@ -97,7 +115,7 @@
         <div class="flex items-center justify-between mb-5">
             <div>
                 <h3 class="text-lg font-bold text-mono">Projets</h3>
-                <p class="text-sm text-secondary-foreground">{{ projects.length }} projets enregistrés</p>
+                <p class="text-sm text-secondary-foreground">{{ filteredProjects.length }} projets enregistrés</p>
             </div>
             <button class="kt-btn kt-btn-primary" (click)="openProjectModal()">
                 <i class="ki-filled ki-plus"></i>
@@ -126,7 +144,7 @@
                                     <i class="ki-filled ki-loading animate-spin text-xl text-secondary-foreground"></i>
                                 </td>
                             </tr>
-                            <tr *ngFor="let proj of projects">
+                             <tr *ngFor="let proj of filteredProjects">
                                 <td class="text-sm text-secondary-foreground">{{ proj.id }}</td>
                                 <td>{{ proj.clientName }}</td>
                                 <td class="font-medium">
@@ -161,7 +179,7 @@
         <div class="flex items-center justify-between mb-5">
             <div>
                 <h3 class="text-lg font-bold text-mono">Imputations</h3>
-                <p class="text-sm text-secondary-foreground">{{ imputations.length }} imputations enregistrées</p>
+                <p class="text-sm text-secondary-foreground">{{ filteredImputations.length }} imputations enregistrées</p>
             </div>
             <button class="kt-btn kt-btn-primary" (click)="openImputationModal()">
                 <i class="ki-filled ki-plus"></i>
@@ -189,7 +207,7 @@
                                     <i class="ki-filled ki-loading animate-spin text-xl text-secondary-foreground"></i>
                                 </td>
                             </tr>
-                            <tr *ngFor="let imp of imputations">
+                             <tr *ngFor="let imp of filteredImputations">
                                 <td class="font-medium">{{ imp.collaborateur }}</td>
                                 <td>{{ imp.projet }}</td>
                                 <td>{{ imp.mois }}</td>
@@ -226,23 +244,28 @@
             <div class="modal-body">
                 <div class="mb-4">
                     <label class="form-label font-bold">Collaborateur *</label>
-                    <input type="text" class="kt-input w-full" [(ngModel)]="collabForm.collaborateur" placeholder="Ex: Chrabai Hamza">
+                    <input type="text" class="kt-input w-full" [(ngModel)]="collabForm.collaborateur" placeholder="Ex: Chrabai Hamza" [class.border-danger]="collabSubmitted && !collabForm.collaborateur">
+                    <span *ngIf="collabSubmitted && !collabForm.collaborateur" class="text-danger text-xs mt-1 block">Ce champ est requis</span>
                 </div>
                 <div class="mb-4">
-                    <label class="form-label font-bold">Date de Démarrage</label>
-                    <input type="text" class="kt-input w-full" [(ngModel)]="collabForm.dateDemarrage" placeholder="Ex: 2022-01-15">
+                    <label class="form-label font-bold">Date de Démarrage *</label>
+                    <input type="text" class="kt-input w-full" [(ngModel)]="collabForm.dateDemarrage" placeholder="Ex: 2022-01-15" [class.border-danger]="collabSubmitted && !collabForm.dateDemarrage">
+                    <span *ngIf="collabSubmitted && !collabForm.dateDemarrage" class="text-danger text-xs mt-1 block">Ce champ est requis</span>
                 </div>
                 <div class="mb-4">
-                    <label class="form-label font-bold">Profil Professionnel</label>
-                    <input type="text" class="kt-input w-full" [(ngModel)]="collabForm.profilProfessionnel" placeholder="Ex: Développeur senior">
+                    <label class="form-label font-bold">Profil Professionnel *</label>
+                    <input type="text" class="kt-input w-full" [(ngModel)]="collabForm.profilProfessionnel" placeholder="Ex: Développeur senior" [class.border-danger]="collabSubmitted && !collabForm.profilProfessionnel">
+                    <span *ngIf="collabSubmitted && !collabForm.profilProfessionnel" class="text-danger text-xs mt-1 block">Ce champ est requis</span>
                 </div>
                 <div class="mb-4">
-                    <label class="form-label font-bold">Ancienneté</label>
-                    <input type="text" class="kt-input w-full" [(ngModel)]="collabForm.anciennete" placeholder="Ex: 4 ans">
+                    <label class="form-label font-bold">Ancienneté *</label>
+                    <input type="text" class="kt-input w-full" [(ngModel)]="collabForm.anciennete" placeholder="Ex: 4 ans" [class.border-danger]="collabSubmitted && !collabForm.anciennete">
+                    <span *ngIf="collabSubmitted && !collabForm.anciennete" class="text-danger text-xs mt-1 block">Ce champ est requis</span>
                 </div>
                 <div class="mb-4">
                     <label class="form-label font-bold">Salaire (MAD) *</label>
-                    <input type="number" class="kt-input w-full" [(ngModel)]="collabForm.salaire" min="0">
+                    <input type="number" class="kt-input w-full" [(ngModel)]="collabForm.salaire" min="0" [class.border-danger]="collabSubmitted && !collabForm.salaire">
+                    <span *ngIf="collabSubmitted && !collabForm.salaire" class="text-danger text-xs mt-1 block">Ce champ est requis</span>
                 </div>
             </div>
             <div class="modal-footer">
@@ -265,29 +288,34 @@
             <div class="modal-body">
                 <div class="mb-4">
                     <label class="form-label font-bold">Collaborateur *</label>
-                    <select class="kt-input w-full" [(ngModel)]="imputationForm.collaborateurId" (change)="onCollaboratorChange($event)">
+                    <select class="kt-input w-full" [(ngModel)]="imputationForm.collaborateurId" (change)="onCollaboratorChange($event)" [class.border-danger]="imputationSubmitted && !imputationForm.collaborateurId">
                         <option [value]="undefined" disabled>Sélectionner un collaborateur</option>
                         <option *ngFor="let c of collaborators" [value]="c.id">{{ c.collaborateur }}</option>
                     </select>
+                    <span *ngIf="imputationSubmitted && !imputationForm.collaborateurId" class="text-danger text-xs mt-1 block">Ce champ est requis</span>
                 </div>
                 <div class="mb-4">
                     <label class="form-label font-bold">Projet *</label>
-                    <select class="kt-input w-full" [(ngModel)]="imputationForm.projetId" (change)="onProjectChange($event)">
+                    <select class="kt-input w-full" [(ngModel)]="imputationForm.projetId" (change)="onProjectChange($event)" [class.border-danger]="imputationSubmitted && !imputationForm.projetId">
                         <option [value]="undefined" disabled>Sélectionner un projet</option>
                         <option *ngFor="let p of projects" [value]="p.id">{{ p.name }}</option>
                     </select>
+                    <span *ngIf="imputationSubmitted && !imputationForm.projetId" class="text-danger text-xs mt-1 block">Ce champ est requis</span>
                 </div>
                 <div class="mb-4">
                     <label class="form-label font-bold">Mois *</label>
-                    <input type="text" class="kt-input w-full" [(ngModel)]="imputationForm.mois" placeholder="Ex: 01, 02...">
+                    <input type="text" class="kt-input w-full" [(ngModel)]="imputationForm.mois" placeholder="Ex: 01, 02..." [class.border-danger]="imputationSubmitted && !imputationForm.mois">
+                    <span *ngIf="imputationSubmitted && !imputationForm.mois" class="text-danger text-xs mt-1 block">Ce champ est requis</span>
                 </div>
                 <div class="mb-4">
                     <label class="form-label font-bold">Année *</label>
-                    <input type="text" class="kt-input w-full" [(ngModel)]="imputationForm.annee" placeholder="Ex: 2024">
+                    <input type="text" class="kt-input w-full" [(ngModel)]="imputationForm.annee" placeholder="Ex: 2024" [class.border-danger]="imputationSubmitted && !imputationForm.annee">
+                    <span *ngIf="imputationSubmitted && !imputationForm.annee" class="text-danger text-xs mt-1 block">Ce champ est requis</span>
                 </div>
                 <div class="mb-4">
                     <label class="form-label font-bold">Nombre de jours *</label>
-                    <input type="number" class="kt-input w-full" [(ngModel)]="imputationForm.nbrJours" min="0">
+                    <input type="number" class="kt-input w-full" [(ngModel)]="imputationForm.nbrJours" min="0" [class.border-danger]="imputationSubmitted && !imputationForm.nbrJours">
+                    <span *ngIf="imputationSubmitted && !imputationForm.nbrJours" class="text-danger text-xs mt-1 block">Ce champ est requis</span>
                 </div>
             </div>
             <div class="modal-footer">
@@ -310,23 +338,28 @@
             <div class="modal-body">
                 <div class="mb-4">
                     <label class="form-label font-bold">Nom du Projet *</label>
-                    <input type="text" class="kt-input w-full" [(ngModel)]="projectForm.name" placeholder="Ex: Projet Alpha">
+                    <input type="text" class="kt-input w-full" [(ngModel)]="projectForm.name" placeholder="Ex: Projet Alpha" [class.border-danger]="projectSubmitted && !projectForm.name">
+                    <span *ngIf="projectSubmitted && !projectForm.name" class="text-danger text-xs mt-1 block">Ce champ est requis</span>
                 </div>
                 <div class="mb-4">
                     <label class="form-label font-bold">Nom du Client *</label>
-                    <input type="text" class="kt-input w-full" [(ngModel)]="projectForm.clientName" placeholder="Ex: Client A">
+                    <input type="text" class="kt-input w-full" [(ngModel)]="projectForm.clientName" placeholder="Ex: Client A" [class.border-danger]="projectSubmitted && !projectForm.clientName">
+                    <span *ngIf="projectSubmitted && !projectForm.clientName" class="text-danger text-xs mt-1 block">Ce champ est requis</span>
                 </div>
                 <div class="mb-4">
-                    <label class="form-label font-bold">Date de Début</label>
-                    <input type="text" class="kt-input w-full" [(ngModel)]="projectForm.startDate" placeholder="Ex: 2024-01-01">
+                    <label class="form-label font-bold">Date de Début *</label>
+                    <input type="text" class="kt-input w-full" [(ngModel)]="projectForm.startDate" placeholder="Ex: 2024-01-01" [class.border-danger]="projectSubmitted && !projectForm.startDate">
+                    <span *ngIf="projectSubmitted && !projectForm.startDate" class="text-danger text-xs mt-1 block">Ce champ est requis</span>
                 </div>
                 <div class="mb-4">
-                    <label class="form-label font-bold">Date de Fin</label>
-                    <input type="text" class="kt-input w-full" [(ngModel)]="projectForm.endDate" placeholder="Ex: 2024-12-31">
+                    <label class="form-label font-bold">Date de Fin *</label>
+                    <input type="text" class="kt-input w-full" [(ngModel)]="projectForm.endDate" placeholder="Ex: 2024-12-31" [class.border-danger]="projectSubmitted && !projectForm.endDate">
+                    <span *ngIf="projectSubmitted && !projectForm.endDate" class="text-danger text-xs mt-1 block">Ce champ est requis</span>
                 </div>
                 <div class="mb-4">
-                    <label class="form-label font-bold">Chiffre d'Affaires (MAD)</label>
-                    <input type="number" class="kt-input w-full" [(ngModel)]="projectForm.turnover" min="0">
+                    <label class="form-label font-bold">Chiffre d'Affaires (MAD) *</label>
+                    <input type="number" class="kt-input w-full" [(ngModel)]="projectForm.turnover" min="0" [class.border-danger]="projectSubmitted && !projectForm.turnover">
+                    <span *ngIf="projectSubmitted && !projectForm.turnover" class="text-danger text-xs mt-1 block">Ce champ est requis</span>
                 </div>
                 <div class="mb-4">
                     <label class="form-label font-bold">Description</label>
