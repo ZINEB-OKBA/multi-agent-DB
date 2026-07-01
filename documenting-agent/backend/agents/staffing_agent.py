@@ -95,6 +95,7 @@ Génère une requête SQL PostgreSQL valide, optimisée et sécurisée pour rép
 6. Si la question n'a pas de sens ou ne concerne pas ces tables, ou s'il s'agit d'une simple salutation (ex: "bonjour"), écris simplement une réponse textuelle polie ou `NONE`.
 7. Pour la recherche de noms de personnes composés de plusieurs mots (ex: "ahmed elhajjami" alors que la BDD contient "elhajjami ahmed"), ne cherche jamais le nom en une seule chaîne. Sépare obligatoirement chaque mot du nom dans des conditions `ILIKE` distinctes combinées par `AND` (ex: `collaborateur ILIKE '%ahmed%' AND collaborateur ILIKE '%elhajjami%'`). Cela permet d'être totalement insensible à l'ordre des prénoms/noms saisis par l'utilisateur.
 8. REGLE GROUP BY (POSTGRESQL) : Dans toute requête contenant un `GROUP BY`, toutes les colonnes sélectionnées dans le `SELECT` ou utilisées dans le `ORDER BY` qui ne sont pas des fonctions d'agrégation (comme `SUM`, `AVG`, `MAX`) doivent impérativement être incluses dans la clause `GROUP BY` (ex: `SELECT c.collaborateur, c.salaire ... GROUP BY c.collaborateur, c.salaire`).
+9. REGLE LEFT JOIN : Lors d'une requête listant les collaborateurs et leurs projets (ou inversement), utilise de préférence un `LEFT JOIN` (au lieu d'un `INNER JOIN`) sur la table `collaborateurs` pour t'assurer que tous les collaborateurs enregistrés soient listés, même s'ils n'ont aucun projet ou aucune imputation attribuée pour le moment.
 
 QUESTION DE L'UTILISATEUR : {question}
 REQUÊTE SQL :"""
