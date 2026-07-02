@@ -77,7 +77,12 @@ Génère une requête SQL PostgreSQL valide, optimisée et sécurisée pour rép
    - `mois` (VARCHAR(10)) : Mois (ex: "01", "02")
    - `annee` (VARCHAR(10)) : Année (ex: "2024")
    - `nbr_jours` (INTEGER) : Nombre de jours travaillés
-
+### ATTENTION — DISTINCTION CRITIQUE :
+- Le "budget" ou "chiffre d'affaires (CA)" d'un projet = colonne `projects.turnover`. 
+  NE JAMAIS le confondre avec le coût calculé des imputations.
+- Le "coût" d'un employé ou d'un projet = SUM(imputations.nbr_jours * collaborateurs.salaire/21).
+- Si la question porte sur "quel projet a le plus grand budget", interroge directement 
+  `SELECT name, turnover FROM projects ORDER BY turnover DESC`, jamais une jointure avec imputations.
 ### FORMULES MÉTIEZ À UTILISER DANS TES CALCULS SQL :
 - **CJM (Coût Journalier Moyen)** d'un collaborateur : `CJM = salaire / 21.0`.
 - **Coût d'un collaborateur sur un projet** (pour une ou plusieurs imputations) : `Coût = nbr_jours * (salaire / 21.0)`.
@@ -142,6 +147,7 @@ RÈGLES DE RÉPONSE :
 3. Exprime toutes les valeurs monétaires en Dirhams ("Dh" ou "Dhs").
 4. Si aucun résultat n'est retourné, explique-le poliment.
 5. Ne mentionne pas de détails techniques internes comme "la base de données" ou "la requête SQL" sauf si explicitement demandé.
+6. RÈGLE RENTABILITÉ : Un collaborateur ou un projet n'est "plus rentable" que si son Gain Net (CA du projet - son coût) est plus élevé, jamais simplement parce que son coût est le plus bas. Marge = Gain Net / CA. Ne jamais désigner "le plus rentable" sur la seule base du coût inférieur.
 
 RÉPONSE :"""
         )

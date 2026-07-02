@@ -63,23 +63,41 @@
                     <table class="kt-table table-auto kt-table-border">
                         <thead>
                             <tr>
-                                <th>ID</th>
-                                <th>Collaborateur</th>
-                                <th>Date de Démarrage</th>
+                                <th (click)="toggleCollabSort('collaborateur')" class="cursor-pointer select-none hover:bg-secondary/10">
+                                    <div class="flex items-center gap-1">
+                                        Collaborateur
+                                        <i [class]="collabSortColumn === 'collaborateur' ? (collabSortDirection === 'asc' ? 'ki-filled ki-arrow-up text-primary' : 'ki-filled ki-arrow-down text-primary') : 'ki-filled ki-arrow-up-down text-secondary-foreground/50'"></i>
+                                    </div>
+                                </th>
+                                <th (click)="toggleCollabSort('dateDemarrage')" class="cursor-pointer select-none hover:bg-secondary/10">
+                                    <div class="flex items-center gap-1">
+                                        Date de Démarrage
+                                        <i [class]="collabSortColumn === 'dateDemarrage' ? (collabSortDirection === 'asc' ? 'ki-filled ki-arrow-up text-primary' : 'ki-filled ki-arrow-down text-primary') : 'ki-filled ki-arrow-up-down text-secondary-foreground/50'"></i>
+                                    </div>
+                                </th>
                                 <th>Profil Professionnel</th>
-                                <th>Ancienneté</th>
-                                <th>Salaire (MAD)</th>
+                                <th (click)="toggleCollabSort('anciennete')" class="cursor-pointer select-none hover:bg-secondary/10">
+                                    <div class="flex items-center gap-1">
+                                        Ancienneté
+                                        <i [class]="collabSortColumn === 'anciennete' ? (collabSortDirection === 'asc' ? 'ki-filled ki-arrow-up text-primary' : 'ki-filled ki-arrow-down text-primary') : 'ki-filled ki-arrow-up-down text-secondary-foreground/50'"></i>
+                                    </div>
+                                </th>
+                                <th (click)="toggleCollabSort('salaire')" class="cursor-pointer select-none hover:bg-secondary/10">
+                                    <div class="flex items-center gap-1">
+                                        Salaire (MAD)
+                                        <i [class]="collabSortColumn === 'salaire' ? (collabSortDirection === 'asc' ? 'ki-filled ki-arrow-up text-primary' : 'ki-filled ki-arrow-down text-primary') : 'ki-filled ki-arrow-up-down text-secondary-foreground/50'"></i>
+                                    </div>
+                                </th>
                                 <th class="text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr *ngIf="isLoading">
-                                <td colspan="7" class="text-center py-10">
+                                <td colspan="6" class="text-center py-10">
                                     <i class="ki-filled ki-loading animate-spin text-xl text-secondary-foreground"></i>
                                 </td>
                             </tr>
                              <tr *ngFor="let collab of filteredCollaborators">
-                                <td class="text-sm text-secondary-foreground">{{ collab.id }}</td>
                                 <td class="font-medium">
                                     <div class="flex items-center gap-3">
                                         <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
@@ -129,23 +147,46 @@
                     <table class="kt-table table-auto kt-table-border">
                         <thead>
                             <tr>
-                                <th>ID</th>
-                                <th>Nom du Client</th>
-                                <th>Nom du Projet</th>
-                                <th>Date de Début</th>
-                                <th>Date de Fin</th>
-                                <th>Chiffre d'Affaires (MAD)</th>
+                                <th (click)="toggleProjectSort('clientName')" class="cursor-pointer select-none hover:bg-secondary/10">
+                                    <div class="flex items-center gap-1">
+                                        Nom du Client
+                                        <i [class]="projectSortColumn === 'clientName' ? (projectSortDirection === 'asc' ? 'ki-filled ki-arrow-up text-primary' : 'ki-filled ki-arrow-down text-primary') : 'ki-filled ki-arrow-up-down text-secondary-foreground/50'"></i>
+                                    </div>
+                                </th>
+                                <th (click)="toggleProjectSort('name')" class="cursor-pointer select-none hover:bg-secondary/10">
+                                    <div class="flex items-center gap-1">
+                                        Nom du Projet
+                                        <i [class]="projectSortColumn === 'name' ? (projectSortDirection === 'asc' ? 'ki-filled ki-arrow-up text-primary' : 'ki-filled ki-arrow-down text-primary') : 'ki-filled ki-arrow-up-down text-secondary-foreground/50'"></i>
+                                    </div>
+                                </th>
+                                <th (click)="toggleProjectSort('startDate')" class="cursor-pointer select-none hover:bg-secondary/10">
+                                    <div class="flex items-center gap-1">
+                                        Date de Début
+                                        <i [class]="projectSortColumn === 'startDate' ? (projectSortDirection === 'asc' ? 'ki-filled ki-arrow-up text-primary' : 'ki-filled ki-arrow-down text-primary') : 'ki-filled ki-arrow-up-down text-secondary-foreground/50'"></i>
+                                    </div>
+                                </th>
+                                <th (click)="toggleProjectSort('endDate')" class="cursor-pointer select-none hover:bg-secondary/10">
+                                    <div class="flex items-center gap-1">
+                                        Date de Fin
+                                        <i [class]="projectSortColumn === 'endDate' ? (projectSortDirection === 'asc' ? 'ki-filled ki-arrow-up text-primary' : 'ki-filled ki-arrow-down text-primary') : 'ki-filled ki-arrow-up-down text-secondary-foreground/50'"></i>
+                                    </div>
+                                </th>
+                                <th (click)="toggleProjectSort('turnover')" class="cursor-pointer select-none hover:bg-secondary/10">
+                                    <div class="flex items-center gap-1">
+                                        Chiffre d'Affaires (MAD)
+                                        <i [class]="projectSortColumn === 'turnover' ? (projectSortDirection === 'asc' ? 'ki-filled ki-arrow-up text-primary' : 'ki-filled ki-arrow-down text-primary') : 'ki-filled ki-arrow-up-down text-secondary-foreground/50'"></i>
+                                    </div>
+                                </th>
                                 <th class="text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr *ngIf="isLoading">
-                                <td colspan="7" class="text-center py-10">
+                                <td colspan="6" class="text-center py-10">
                                     <i class="ki-filled ki-loading animate-spin text-xl text-secondary-foreground"></i>
                                 </td>
                             </tr>
                              <tr *ngFor="let proj of filteredProjects">
-                                <td class="text-sm text-secondary-foreground">{{ proj.id }}</td>
                                 <td>{{ proj.clientName }}</td>
                                 <td class="font-medium">
                                     <div class="flex items-center gap-2">
@@ -249,8 +290,9 @@
                 </div>
                 <div class="mb-4">
                     <label class="form-label font-bold">Date de Démarrage *</label>
-                    <input type="text" class="kt-input w-full" [(ngModel)]="collabForm.dateDemarrage" placeholder="Ex: 2022-01-15" [class.border-danger]="collabSubmitted && !collabForm.dateDemarrage">
+                    <input type="text" class="kt-input w-full" [(ngModel)]="collabForm.dateDemarrage" placeholder="Ex: 2022-01-15" [class.border-danger]="(collabSubmitted && !collabForm.dateDemarrage) || (collabForm.dateDemarrage && isCollabDateInvalid())">
                     <span *ngIf="collabSubmitted && !collabForm.dateDemarrage" class="text-danger text-xs mt-1 block">Ce champ est requis</span>
+                    <span *ngIf="collabForm.dateDemarrage && isCollabDateInvalid()" class="text-danger text-xs mt-1 block">Le format de la date doit être YYYY-MM-DD (ex: 2022-01-15)</span>
                 </div>
                 <div class="mb-4">
                     <label class="form-label font-bold">Profil Professionnel *</label>
@@ -304,18 +346,21 @@
                 </div>
                 <div class="mb-4">
                     <label class="form-label font-bold">Mois *</label>
-                    <input type="text" class="kt-input w-full" [(ngModel)]="imputationForm.mois" placeholder="Ex: 01, 02..." [class.border-danger]="imputationSubmitted && !imputationForm.mois">
+                    <input type="text" class="kt-input w-full" [(ngModel)]="imputationForm.mois" placeholder="Ex: 01, 02..." [class.border-danger]="(imputationSubmitted && !imputationForm.mois) || (imputationForm.mois && isImputationMoisInvalid())">
                     <span *ngIf="imputationSubmitted && !imputationForm.mois" class="text-danger text-xs mt-1 block">Ce champ est requis</span>
+                    <span *ngIf="imputationForm.mois && isImputationMoisInvalid()" class="text-danger text-xs mt-1 block">Le mois doit être compris entre 01 et 12</span>
                 </div>
                 <div class="mb-4">
                     <label class="form-label font-bold">Année *</label>
-                    <input type="text" class="kt-input w-full" [(ngModel)]="imputationForm.annee" placeholder="Ex: 2024" [class.border-danger]="imputationSubmitted && !imputationForm.annee">
+                    <input type="text" class="kt-input w-full" [(ngModel)]="imputationForm.annee" placeholder="Ex: 2024" [class.border-danger]="(imputationSubmitted && !imputationForm.annee) || (imputationForm.annee && isImputationAnneeInvalid())">
                     <span *ngIf="imputationSubmitted && !imputationForm.annee" class="text-danger text-xs mt-1 block">Ce champ est requis</span>
+                    <span *ngIf="imputationForm.annee && isImputationAnneeInvalid()" class="text-danger text-xs mt-1 block">L'année doit être un nombre à 4 chiffres (ex: 2024)</span>
                 </div>
                 <div class="mb-4">
                     <label class="form-label font-bold">Nombre de jours *</label>
-                    <input type="number" class="kt-input w-full" [(ngModel)]="imputationForm.nbrJours" min="0" [class.border-danger]="imputationSubmitted && !imputationForm.nbrJours">
-                    <span *ngIf="imputationSubmitted && !imputationForm.nbrJours" class="text-danger text-xs mt-1 block">Ce champ est requis</span>
+                    <input type="number" class="kt-input w-full" [(ngModel)]="imputationForm.nbrJours" min="0" [class.border-danger]="(imputationSubmitted && (imputationForm.nbrJours === undefined || imputationForm.nbrJours === null)) || (imputationForm.nbrJours !== undefined && imputationForm.nbrJours !== null && isImputationNbrJoursInvalid())">
+                    <span *ngIf="imputationSubmitted && (imputationForm.nbrJours === undefined || imputationForm.nbrJours === null)" class="text-danger text-xs mt-1 block">Ce champ est requis</span>
+                    <span *ngIf="imputationForm.nbrJours !== undefined && imputationForm.nbrJours !== null && isImputationNbrJoursInvalid()" class="text-danger text-xs mt-1 block">Le nombre de jours doit être compris entre 0 et 31</span>
                 </div>
             </div>
             <div class="modal-footer">
@@ -348,13 +393,16 @@
                 </div>
                 <div class="mb-4">
                     <label class="form-label font-bold">Date de Début *</label>
-                    <input type="text" class="kt-input w-full" [(ngModel)]="projectForm.startDate" placeholder="Ex: 2024-01-01" [class.border-danger]="projectSubmitted && !projectForm.startDate">
+                    <input type="text" class="kt-input w-full" [(ngModel)]="projectForm.startDate" placeholder="Ex: 2024-01-01" [class.border-danger]="(projectSubmitted && !projectForm.startDate) || (projectForm.startDate && isProjectStartDateInvalid()) || (projectForm.startDate && projectForm.endDate && isProjectDateRangeInvalid())">
                     <span *ngIf="projectSubmitted && !projectForm.startDate" class="text-danger text-xs mt-1 block">Ce champ est requis</span>
+                    <span *ngIf="projectForm.startDate && isProjectStartDateInvalid()" class="text-danger text-xs mt-1 block">Le format doit être YYYY-MM-DD (ex: 2024-01-01)</span>
                 </div>
                 <div class="mb-4">
                     <label class="form-label font-bold">Date de Fin *</label>
-                    <input type="text" class="kt-input w-full" [(ngModel)]="projectForm.endDate" placeholder="Ex: 2024-12-31" [class.border-danger]="projectSubmitted && !projectForm.endDate">
+                    <input type="text" class="kt-input w-full" [(ngModel)]="projectForm.endDate" placeholder="Ex: 2024-12-31" [class.border-danger]="(projectSubmitted && !projectForm.endDate) || (projectForm.endDate && isProjectEndDateInvalid()) || (projectForm.startDate && projectForm.endDate && isProjectDateRangeInvalid())">
                     <span *ngIf="projectSubmitted && !projectForm.endDate" class="text-danger text-xs mt-1 block">Ce champ est requis</span>
+                    <span *ngIf="projectForm.endDate && isProjectEndDateInvalid()" class="text-danger text-xs mt-1 block">Le format doit être YYYY-MM-DD (ex: 2024-12-31)</span>
+                    <span *ngIf="projectForm.startDate && projectForm.endDate && !isProjectStartDateInvalid() && !isProjectEndDateInvalid() && isProjectDateRangeInvalid()" class="text-danger text-xs mt-1 block">La date de fin doit être postérieure à la date de début</span>
                 </div>
                 <div class="mb-4">
                     <label class="form-label font-bold">Chiffre d'Affaires (MAD) *</label>

@@ -1,62 +1,126 @@
 """
-loader_excel.py
----------------
-Charge les fichiers CSV et Excel dans des DataFrames Pandas.
+utils/loader_excel.py
+─────────────────────────────────────────────────────────────────────────────
+Charge les fichiers CSV/Excel dans des DataFrames Pandas.
 
-CORRECTIONS :
-  - Lecture xlsx avec fallback multi-engine (openpyxl → xlrd → calamine)
-  - Installation automatique d'openpyxl dans le venv si absent
-  - Avertissement clair si le package est manquant
+Améliorations supplémentaires :
+  ✅ tool-calling agent 
+  ✅ prefix riche + schéma colonnes 
+  ✅ Retry 429 avec backoff intelligent 
+  ✅ Nettoyage code Python + tableaux Markdown 
+  ✅ Capture Plotly + Matplotlib 
+  ✅ MÉMOIRE par session : l'agent Excel se souvient des échanges passés
+  ✅ 4 nouveaux graphiques automatiques (distribution, corrélation, tendance, heatmap)
+  ✅ Détection intelligente du type de chart selon les données
 """
 
-import os
-import sys
+import io
+import json
 import logging
+import os
+import re
 import subprocess
+import sys
 import tempfile
+import time
+from collections import deque
 from pathlib import Path
-from typing import Dict
+from typing import Any, Dict, List, Optional
 
-import pandas as pd
+import base64
 import matplotlib
 matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.io as pio
+from plotly.io._base_renderers import ExternalRenderer
+
 from langchain_experimental.agents import create_pandas_dataframe_agent
 from utils.llm_factory import get_llm
-from typing import Dict, Any, Optional
-import plotly.io as pio
-import base64
-from plotly.io._base_renderers import ExternalRenderer
+
+logger = logging.getLogger(__name__)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CAPTURE PLOTLY
+# ══════════════════════════════════════════════════════════════════════════════
 
 class Base64ImageRenderer(ExternalRenderer):
     def __init__(self):
-        self.figures = []
+        self.figures: List = []
+
     def render(self, fig, **kwargs):
         self.figures.append(fig)
+
 
 plotly_capture_renderer = Base64ImageRenderer()
 pio.renderers["base64_capture"] = plotly_capture_renderer
 pio.renderers.default = "base64_capture"
 
-logger = logging.getLogger(__name__)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# MÉMOIRE DE L'AGENT EXCEL (par project_id)
+# ══════════════════════════════════════════════════════════════════════════════
+
+class ExcelAgentMemory:
+    """
+    Mémoire glissante de l'agent Excel.
+    Stocke les N derniers échanges (question + réponse courte) par project_id.
+    Injecte automatiquement le contexte dans le prochain prompt.
+    """
+    _WINDOW = 10          # Nombre maximum d'échanges mémorisés
+    _MAX_CHARS = 200      # Tronquer les réponses longues dans le résumé
+
+    def __init__(self):
+        self._store: Dict[int, deque] = {}
+
+    def _key(self, project_id: int) -> deque:
+        if project_id not in self._store:
+            self._store[project_id] = deque(maxlen=self._WINDOW)
+        return self._store[project_id]
+
+    def add(self, project_id: int, question: str, answer: str):
+        q = str(question)[:300]
+        a = str(answer)[:self._MAX_CHARS]
+        self._key(project_id).append({"q": q, "a": a})
+
+    def get_context(self, project_id: int) -> str:
+        history = self._key(project_id)
+        if not history:
+            return ""
+        lines = ["\n\n══════ MÉMOIRE DES ÉCHANGES PRÉCÉDENTS ══════"]
+        for i, turn in enumerate(history, 1):
+            lines.append(f"[{i}] Utilisateur : {turn['q']}")
+            lines.append(f"     Assistant  : {turn['a']}")
+        lines.append("══════════════════════════════════════════════\n")
+        return "\n".join(lines)
+
+    def clear(self, project_id: int):
+        self._store.pop(project_id, None)
 
 
-# ── Auto-install openpyxl dans le venv si absent ───────────────────────────────
+EXCEL_MEMORY = ExcelAgentMemory()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# AUTO-INSTALL DÉPENDANCES
+# ══════════════════════════════════════════════════════════════════════════════
 
 def _ensure_openpyxl():
-    """Installe openpyxl dans le venv courant si non disponible."""
     try:
         import openpyxl  # noqa
         return True
     except ImportError:
-        logger.warning("⚠️  openpyxl absent — tentative d'installation automatique...")
+        logger.warning("⚠️  openpyxl absent — installation automatique...")
         try:
             subprocess.check_call(
                 [sys.executable, "-m", "pip", "install", "openpyxl", "tabulate", "--quiet"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             )
             import openpyxl  # noqa
-            logger.info("✅ openpyxl installé avec succès.")
+            logger.info("✅ openpyxl installé.")
             return True
         except Exception as e:
             logger.error(f"❌ Impossible d'installer openpyxl : {e}")
@@ -64,89 +128,69 @@ def _ensure_openpyxl():
 
 
 def _ensure_tabulate():
-    """Installe tabulate dans le venv courant si non disponible."""
     try:
         import tabulate  # noqa
         return True
     except ImportError:
-        logger.warning("⚠️  tabulate absent — tentative d'installation automatique...")
+        logger.warning("⚠️  tabulate absent — installation automatique...")
         try:
             subprocess.check_call(
                 [sys.executable, "-m", "pip", "install", "tabulate", "--quiet"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             )
             import tabulate  # noqa
-            logger.info("✅ tabulate installé avec succès.")
+            logger.info("✅ tabulate installé.")
             return True
         except Exception as e:
             logger.error(f"❌ Impossible d'installer tabulate : {e}")
             return False
 
 
-# ── Chargement ─────────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# CHARGEMENT DATAFRAMES
+# ══════════════════════════════════════════════════════════════════════════════
 
 def load_dataframe(file_path: str) -> pd.DataFrame:
-    """
-    Charge un CSV ou Excel en DataFrame.
-    Pour xlsx/xls : essaie plusieurs engines dans l'ordre jusqu'à succès.
-    """
     suffix = Path(file_path).suffix.lower()
     logger.info(f"📊 Chargement : {file_path}")
 
     if suffix == ".csv":
-        # Essaie plusieurs encodages courants
         for enc in ("utf-8", "latin-1", "cp1252", "utf-8-sig"):
             try:
                 df = pd.read_csv(file_path, encoding=enc)
-                logger.info(f"   → {df.shape[0]} lignes × {df.shape[1]} colonnes (encoding={enc})")
+                logger.info(f"   → {df.shape[0]}L × {df.shape[1]}C (encoding={enc})")
                 return df
             except UnicodeDecodeError:
                 continue
-        raise ValueError(f"Impossible de lire le CSV {file_path} avec les encodages connus.")
+        raise ValueError(f"Impossible de lire le CSV {file_path}")
 
     elif suffix in (".xlsx", ".xlsm", ".xltx", ".xltm"):
-        # Essaie openpyxl en premier
         _ensure_openpyxl()
-        engines = ["openpyxl", "calamine"]
-        last_err = None
-        for engine in engines:
+        for engine in ["openpyxl", "calamine"]:
             try:
                 df = pd.read_excel(file_path, engine=engine)
-                logger.info(f"   → {df.shape[0]} lignes × {df.shape[1]} colonnes (engine={engine})")
+                logger.info(f"   → {df.shape[0]}L × {df.shape[1]}C (engine={engine})")
                 return df
             except Exception as e:
-                last_err = e
                 logger.warning(f"   ⚠️  Engine '{engine}' échoué : {e}")
-        raise ImportError(
-            f"Impossible de lire le fichier xlsx.\n"
-            f"Ouvre PowerShell en ADMINISTRATEUR et tape :\n"
-            f"  {sys.executable} -m pip install openpyxl tabulate --force-reinstall\n"
-            f"Erreur : {last_err}"
-        )
+        raise ImportError("Impossible de lire le xlsx — installe openpyxl : pip install openpyxl")
 
     elif suffix == ".xls":
         try:
             df = pd.read_excel(file_path, engine="xlrd")
-            logger.info(f"   → {df.shape[0]} lignes × {df.shape[1]} colonnes (engine=xlrd)")
+            logger.info(f"   → {df.shape[0]}L × {df.shape[1]}C (engine=xlrd)")
             return df
         except Exception as e:
-            raise ImportError(
-                f"Impossible de lire le .xls. Installe xlrd :\n"
-                f"  {sys.executable} -m pip install xlrd\n"
-                f"Erreur : {e}"
-            )
+            raise ImportError(f"Impossible de lire le .xls — installe xlrd\nErreur : {e}")
 
     else:
         raise ValueError(f"Format non supporté : {suffix}")
 
 
 def load_all_tables(tables_folder: str) -> Dict[str, pd.DataFrame]:
-    """Charge tous les CSV/Excel d'un dossier."""
     folder = Path(tables_folder)
     if not folder.exists():
         raise FileNotFoundError(f"Dossier introuvable : {tables_folder}")
-
     dataframes: Dict[str, pd.DataFrame] = {}
     for f in folder.iterdir():
         if f.suffix.lower() in (".csv", ".xlsx", ".xls", ".xlsm"):
@@ -154,88 +198,241 @@ def load_all_tables(tables_folder: str) -> Dict[str, pd.DataFrame]:
                 dataframes[f.stem] = load_dataframe(str(f))
             except Exception as e:
                 logger.error(f"❌ {f.name} ignoré : {e}")
-
     if not dataframes:
         raise ValueError(f"Aucun CSV/Excel chargé dans : {tables_folder}")
     return dataframes
 
 
 def load_uploaded_tables(uploaded_files) -> Dict[str, pd.DataFrame]:
-    """
-    Charge des fichiers uploadés via Streamlit dans des DataFrames.
-    Affiche une erreur claire si openpyxl est manquant.
-    """
-    # S'assurer que les dépendances sont présentes au moment du chargement
     _ensure_openpyxl()
     _ensure_tabulate()
-
     dataframes: Dict[str, pd.DataFrame] = {}
-
     for uf in uploaded_files:
         suffix = Path(uf.name).suffix.lower()
         if suffix not in (".csv", ".xlsx", ".xls", ".xlsm"):
-            logger.warning(f"⚠️  Fichier ignoré (format non supporté) : {uf.name}")
             continue
-
-        logger.info(f"📥 Réception : {uf.name} ({getattr(uf, 'size', '?')} octets)")
-
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            content = uf.read()
-            tmp.write(content)
+            tmp.write(uf.read())
             tmp_path = tmp.name
-
-        logger.info(f"   → Fichier tmp : {tmp_path} ({len(content)} octets)")
-
         try:
             df = load_dataframe(tmp_path)
             dataframes[Path(uf.name).stem] = df
-            logger.info(f"   ✅ {uf.name} chargé : {df.shape[0]}L × {df.shape[1]}C")
-        except ImportError as e:
-            # Erreur d'installation de dépendance → message très clair
-            logger.error(f"❌ Dépendance manquante pour {uf.name} : {e}")
-            raise  # remonter pour affichage dans Streamlit
         except Exception as e:
             logger.error(f"❌ Erreur chargement {uf.name} : {e}")
+            raise
         finally:
             try:
                 os.unlink(tmp_path)
             except Exception:
                 pass
-
-    logger.info(f"✅ {len(dataframes)} tableau(x) chargé(s) : {list(dataframes.keys())}")
     return dataframes
 
 
-# ── Agent Pandas ───────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# GRAPHIQUES AUTOMATIQUES ENRICHIS
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _decode_plotly_bdata(obj):
+    """Décode récursivement les bdata binaires Plotly en listes Python."""
+    if isinstance(obj, dict):
+        if "dtype" in obj and "bdata" in obj:
+            try:
+                import numpy as np
+                arr = np.frombuffer(base64.b64decode(obj["bdata"]), dtype=obj["dtype"])
+                return arr.tolist()
+            except Exception:
+                return obj
+        return {k: _decode_plotly_bdata(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_decode_plotly_bdata(x) for x in obj]
+    return obj
+
+
+PREMIUM_PALETTE = ["#534AB7", "#27AE60", "#E67E22", "#E74C3C", "#3498DB",
+                   "#9B59B6", "#1ABC9C", "#F39C12", "#2C3E50", "#7F8C8D"]
+
+
+def _apply_premium_layout(fig, theme_mode: str = "light", chart_type: str = "bar"):
+    """Applique le style Premium sur une figure Plotly."""
+    is_dark = theme_mode.lower() == "dark"
+    bg       = "#121212" if is_dark else "#FFFFFF"
+    plot_bg  = "#1E1E1E" if is_dark else "#F8F9FA"
+    font_c   = "#F3F4F6" if is_dark else "#1F2937"
+    grid_c   = "#2D3748" if is_dark else "#E5E7EB"
+
+    fig.update_layout(
+        font=dict(family="Inter, DM Sans, sans-serif", size=12, color=font_c),
+        paper_bgcolor=bg, plot_bgcolor=plot_bg,
+        margin=dict(l=50, r=20, t=50, b=120),
+        legend=dict(orientation="h", yanchor="top", y=-0.3,
+                    xanchor="center", x=0.5, bgcolor="rgba(0,0,0,0)",
+                    font=dict(color=font_c)),
+    )
+    if chart_type in ("bar", "line"):
+        fig.update_xaxes(showgrid=True, gridcolor=grid_c, zeroline=False,
+                         tickangle=45, color=font_c)
+        fig.update_yaxes(showgrid=True, gridcolor=grid_c, zeroline=True,
+                         zerolinecolor=grid_c, color=font_c)
+    elif chart_type == "pie":
+        fig.update_traces(hole=0.4, textinfo="percent+label")
+
+
+def _fig_to_chart_dict(fig, title: str, chart_type: str,
+                        theme_mode: str = "light") -> Optional[Dict]:
+    """Convertit une figure Plotly en dict prêt pour Angular."""
+    try:
+        _apply_premium_layout(fig, theme_mode, chart_type)
+        img_bytes = fig.to_image(format="png", width=800, height=500, scale=1.5)
+        b64 = "data:image/png;base64," + base64.b64encode(img_bytes).decode()
+        return {
+            "title":   title,
+            "type":    chart_type,
+            "base64":  b64,
+            "plotly":  _decode_plotly_bdata(json.loads(pio.to_json(fig))),
+            "chartjs": None,
+        }
+    except Exception as e:
+        logger.error(f"Erreur conversion figure → chart dict : {e}")
+        return None
+
+
+# ── Nouveau : graphiques automatiques sur le DataFrame ─────────────────────
+
+def generate_auto_charts(
+    dataframes: Dict[str, pd.DataFrame],
+    theme_mode: str = "light",
+) -> List[Dict]:
+    """
+    Génère automatiquement 4 types de graphiques pertinents selon le contenu du DataFrame.
+    Appelé sans demande explicite, pour enrichir chaque réponse Excel avec des visuels.
+
+    Graphiques générés (si colonnes compatibles) :
+      1. Distribution numérique (histogramme ou box plot)
+      2. Top 10 par colonne catégorielle × numérique (bar chart)
+      3. Tendance temporelle (line chart) si colonne date/mois détectée
+      4. Heatmap de corrélation entre colonnes numériques
+    """
+    charts: List[Dict] = []
+
+    for df_name, df in dataframes.items():
+        if df.empty:
+            continue
+
+        num_cols  = df.select_dtypes(include="number").columns.tolist()
+        cat_cols  = df.select_dtypes(include=["object", "category"]).columns.tolist()
+        date_cols = [c for c in df.columns
+                     if any(kw in c.lower() for kw in
+                            ["date", "mois", "month", "annee", "année", "year",
+                             "periode", "période", "temps", "time"])]
+
+        # 1. Distribution numérique — boxplot multi-colonnes
+        if len(num_cols) >= 2:
+            try:
+                fig = go.Figure()
+                for col in num_cols[:6]:
+                    fig.add_trace(go.Box(y=df[col].dropna(), name=col,
+                                         marker_color=PREMIUM_PALETTE[num_cols.index(col) % len(PREMIUM_PALETTE)]))
+                fig.update_layout(title=f"📦 Distribution des variables numériques — {df_name}")
+                c = _fig_to_chart_dict(fig, "Distribution numérique", "bar", theme_mode)
+                if c:
+                    charts.append(c)
+            except Exception as e:
+                logger.warning(f"Chart distribution : {e}")
+
+        # 2. Top 10 — première col catégorielle × première col numérique
+        if cat_cols and num_cols:
+            try:
+                x_col = cat_cols[0]
+                y_col = num_cols[0]
+                top10 = (df.groupby(x_col)[y_col].sum()
+                           .nlargest(10).reset_index())
+                fig = px.bar(top10, x=x_col, y=y_col,
+                             title=f"🏆 Top 10 — {y_col} par {x_col} ({df_name})",
+                             color=x_col,
+                             color_discrete_sequence=PREMIUM_PALETTE,
+                             template="plotly_white")
+                c = _fig_to_chart_dict(fig, f"Top 10 {y_col}", "bar", theme_mode)
+                if c:
+                    charts.append(c)
+            except Exception as e:
+                logger.warning(f"Chart top10 : {e}")
+
+        # 3. Tendance temporelle
+        if date_cols and num_cols:
+            try:
+                d_col = date_cols[0]
+                y_col = num_cols[0]
+                trend = (df.groupby(d_col)[y_col].sum()
+                           .reset_index().sort_values(d_col))
+                fig = px.line(trend, x=d_col, y=y_col,
+                              title=f"📈 Tendance — {y_col} par {d_col} ({df_name})",
+                              markers=True, template="plotly_white",
+                              color_discrete_sequence=[PREMIUM_PALETTE[0]])
+                c = _fig_to_chart_dict(fig, f"Tendance {y_col}", "line", theme_mode)
+                if c:
+                    charts.append(c)
+            except Exception as e:
+                logger.warning(f"Chart tendance : {e}")
+
+        # 4. Heatmap corrélation
+        if len(num_cols) >= 3:
+            try:
+                corr = df[num_cols[:8]].corr().round(2)
+                fig = go.Figure(go.Heatmap(
+                    z=corr.values.tolist(),
+                    x=corr.columns.tolist(),
+                    y=corr.index.tolist(),
+                    colorscale="RdBu", zmid=0,
+                    text=corr.values.round(2).tolist(),
+                    texttemplate="%{text}",
+                ))
+                fig.update_layout(
+                    title=f"🔥 Corrélation entre variables — {df_name}",
+                    paper_bgcolor="#FFFFFF" if theme_mode == "light" else "#121212",
+                    font=dict(color="#1F2937" if theme_mode == "light" else "#F3F4F6"),
+                    margin=dict(l=50, r=20, t=50, b=50),
+                )
+                c = _fig_to_chart_dict(fig, "Heatmap corrélation", "bar", theme_mode)
+                if c:
+                    charts.append(c)
+            except Exception as e:
+                logger.warning(f"Chart heatmap : {e}")
+
+    logger.info(f"📊 {len(charts)} graphique(s) automatique(s) générés")
+    return charts
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# NETTOYAGE CODE PYTHON
+# ══════════════════════════════════════════════════════════════════════════════
 
 def sanitize_python_code(code: str) -> str:
-    """Nettoie le code Python généré par le LLM (retire les backticks markdown et le texte conversationnel)."""
     code = code.strip()
-    import re
-    # Extrait le contenu du bloc de code markdown si présent
     match = re.search(r"```(?:python)?\n?(.*?)\n?```", code, re.DOTALL)
     if match:
         return match.group(1).strip()
-    
-    # Élimine les phrases/commentaires conversationnels à la fin
-    lines = code.splitlines()
-    cleaned_lines = []
+    lines, cleaned = code.splitlines(), []
     for line in lines:
-        stripped = line.strip()
-        if stripped.startswith("(") and stripped.endswith(")"):
+        s = line.strip()
+        if s.startswith("(") and s.endswith(")"):
             continue
-        if any(stripped.startswith(kw) for kw in ["Note :", "Note:", "Remarque :", "Remarque:", "Attention :", "Attention:"]):
+        if any(s.startswith(kw) for kw in
+               ["Note :", "Note:", "Remarque :", "Remarque:", "Attention :"]):
             continue
-        cleaned_lines.append(line)
-    return "\n".join(cleaned_lines).strip()
+        cleaned.append(line)
+    return "\n".join(cleaned).strip()
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# AGENT PANDAS
+# ══════════════════════════════════════════════════════════════════════════════
 
 def get_pandas_agent(dataframes: Dict[str, pd.DataFrame], verbose: bool = True):
-    """Crée un agent LangChain Pandas branché sur Groq."""
-    _ensure_tabulate()  # tabulate requis par to_markdown() dans le prompt
+    """Crée un agent LangChain Pandas tool-calling avec prefix détaillé."""
+    _ensure_tabulate()
 
-    llm = get_llm(temperature=0.0)
-    df_list = list(dataframes.values())
+    llm      = get_llm(temperature=0.0)
+    df_list  = list(dataframes.values())
     df_input = df_list[0] if len(df_list) == 1 else df_list
 
     logger.info(f"🤖 Création agent Pandas ({len(df_list)} DataFrame(s))")
@@ -243,239 +440,271 @@ def get_pandas_agent(dataframes: Dict[str, pd.DataFrame], verbose: bool = True):
     if isinstance(df_input, list):
         schema_info = ""
         for i, d in enumerate(df_input):
-            cols = ", ".join([f"`{col}` ({dtype})" for col, dtype in zip(d.columns, d.dtypes)])
+            cols = ", ".join([f"`{col}` ({dtype})"
+                              for col, dtype in zip(d.columns, d.dtypes)])
             schema_info += f"- DataFrame {i} : {cols}\n"
     else:
-        cols_list = ", ".join([f"`{col}` ({dtype})" for col, dtype in zip(df_input.columns, df_input.dtypes)])
+        cols_list = ", ".join([f"`{col}` ({dtype})"
+                               for col, dtype in zip(df_input.columns, df_input.dtypes)])
         schema_info = f"Colonnes de `df` : {cols_list}"
 
     prefix_str = (
-        "You are working with a pandas dataframe in python. The name of the dataframe is `df`.\n"
-        "You should use the tools below to answer the question run code and inspect the results.\n\n"
-        f"STRUCTURE DES DONNÉES :\n"
-        f"{schema_info}\n"
-        "⚠️ ATTENTION : Respecte STRICTEMENT la casse (majuscules/minuscules) et l'orthographe exacte des colonnes listées ci-dessus dans ton code Python. Par exemple, si la colonne s'appelle 'Salaire', n'écris pas 'salaire'.\n\n"
-        "Tu es un Expert Data Analyst multi-domaines. Réponds exclusivement en français dans la réponse finale (Final Answer).\n"
-        "CONSIGNES IMPORTANTES POUR LE FORMAT RE-ACT :\n"
-        "- La ligne 'Action:' doit obligatoirement être EXACTEMENT 'python_repl_ast' et rien d'autre. Ne traduis pas le nom des outils et ne rajoute aucun texte explicatif sur cette ligne.\n"
-        "- La ligne 'Action Input:' doit contenir uniquement le code Python brut à exécuter. Ne mets pas de backticks (```python ... ```) dans Action Input.\n"
-        "- **REGLE CRITIQUE DE FIN DE TOUR** : Si tu génères une 'Action:', tu ne dois JAMAIS générer 'Final Answer:' dans le même message. Tu DOIS t'arrêter immédiatement après la ligne 'Action Input:'. Tu attendras de recevoir le résultat ('Observation:') avant de pouvoir, lors d'un tour suivant, écrire 'Final Answer:'.\n"
-        "- Seule la réponse finale ('Final Answer:') doit être rédigée en français.\n"
-        "CONSIGNES DE TRAVAIL :\n"
-        "1. **Exploration & Rigueur** : Utilise l'outil `python_repl_ast` pour analyser le dataframe avant de répondre. Ne devine pas les résultats.\n"
-        "2. **Formatage** : Utilise TOUJOURS des tableaux Markdown pour présenter des listes ou des comparaisons.\n"
-        "3. **Visualisation** : Si l'utilisateur demande un graphique (ex: 'pie chart', 'graphe', etc.), tu DOIS écrire du code Plotly Express et appeler `fig.show()` à la fin pour le tracer. N'affiche pas d'images ou d'URLs fictives comme 'graphique.png'. Le système s'occupe de capturer l'affichage de `fig.show()`.\n"
+        "Tu es un Expert Data Analyst. La variable `df` contient déjà les données réelles.\n"
+        "INTERDICTION ABSOLUE de redéfinir `df` avec pd.DataFrame() dans ton code.\n\n"
+        f"STRUCTURE DES DONNÉES :\n{schema_info}\n"
+        "⚠️ Respecte STRICTEMENT la casse exacte des colonnes listées ci-dessus.\n\n"
+        "CONSIGNES :\n"
+        "1. Utilise directement `df` pour tes calculs.\n"
+        "2. Présente tes résultats en tableaux Markdown COMPACTS (pas d'espaces de padding).\n"
+        "3. Si l'utilisateur demande un graphique, utilise Plotly Express et appelle fig.show().\n"
+        "4. Réponds EXCLUSIVEMENT en français.\n"
+        "5. N'invente jamais de données — analyse uniquement ce qui est dans `df`.\n"
+        "6. Si la question fait référence à un échange précédent (ex: 'ce résultat', 'ces données'),\n"
+        "   utilise le contexte mémorisé fourni dans le prompt.\n"
+        "7. Sois extrêmement rigoureux dans l'interprétation des résultats statistiques et des agrégations "
+        "(comme groupby ou crosstab). Ne confonds pas des colonnes catégorielles contenant des identifiants ou noms "
+        "de groupes (ex: des terminaux 'T1', 'T2', 'T3' indiquant l'emplacement d'un stand) avec des compteurs de quantités physiques.\n"
+        "8. Évite absolument d'afficher de grands tableaux bruts (comme des crosstabs ou des tables entières de plus de 10 lignes) "
+        "pour essayer de les lire ou de les compter manuellement dans ta pensée. Utilise toujours des opérations d'agrégation de Pandas "
+        "(comme .value_counts(), .groupby(), .sum(), .mean(), .nunique()) pour obtenir directement les compteurs ou les résumés sous forme "
+        "numérique consolidée avant de formuler ta réponse finale.\n"
     )
 
     agent = create_pandas_dataframe_agent(
         llm=llm,
         df=df_input,
-        agent_type="zero-shot-react-description",
+        agent_type="tool-calling",
         verbose=verbose,
         allow_dangerous_code=True,
         max_iterations=10,
-        return_intermediate_steps=True,
-        agent_executor_kwargs={"handle_parsing_errors": True},
-        prefix=prefix_str
+        handle_parsing_errors=True,
+        prefix=prefix_str,
     )
-    
-    # Nettoyage automatique du code passé à l'outil python_repl_ast
+
+    # Nettoyage automatique du code
     for tool in agent.tools:
         if tool.name == "python_repl_ast":
             original_run = tool._run
-            def patched_run(query: str, *args, **kwargs):
+
+            def patched_run(query: str, *args, _orig=original_run, **kwargs):
                 sanitized = sanitize_python_code(query)
-                logger.info(f"🧹 Code Python nettoyé pour l'outil :\n{sanitized}")
-                return original_run(sanitized, *args, **kwargs)
+                logger.info(f"🧹 Code nettoyé :\n{sanitized}")
+                return _orig(sanitized, *args, **kwargs)
+
             tool._run = patched_run
 
     return agent
 
 
-def _capture_matplotlib_figures() -> list:
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-    import io
-    import base64
+# ══════════════════════════════════════════════════════════════════════════════
+# CAPTURE DES FIGURES
+# ══════════════════════════════════════════════════════════════════════════════
 
-    charts = []
+def _capture_matplotlib_figures(theme_mode: str = "light") -> List[Dict]:
+    charts: List[Dict] = []
     fignums = plt.get_fignums()
-    logger.info(f"📊 Capture des figures matplotlib : {len(fignums)} figures détectées.")
+    logger.info(f"📊 Matplotlib : {len(fignums)} figures")
     for num in fignums:
         try:
             fig = plt.figure(num)
             buf = io.BytesIO()
             fig.savefig(buf, format="png", dpi=150, bbox_inches="tight")
             buf.seek(0)
-            b64 = base64.b64encode(buf.read()).decode("utf-8")
-            
-            # Tenter de deviner ou extraire le titre du graphique
+            b64 = "data:image/png;base64," + base64.b64encode(buf.read()).decode()
             title = "Analyse graphique"
-            if fig.axes:
-                ax = fig.axes[0]
-                if ax.get_title():
-                    title = ax.get_title()
-            
-            charts.append({
-                "title": title,
-                "type": "bar",
-                "base64": f"data:image/png;base64,{b64}",
-                "chartjs": None
-            })
+            if fig.axes and fig.axes[0].get_title():
+                title = fig.axes[0].get_title()
+            charts.append({"title": title, "type": "bar",
+                           "base64": b64, "plotly": None, "chartjs": None})
         except Exception as e:
-            logger.error(f"Erreur de capture de la figure matplotlib {num}: {e}")
-    
-    # Nettoyer toutes les figures en mémoire
+            logger.error(f"Erreur capture matplotlib {num}: {e}")
     plt.close("all")
     return charts
 
 
-def _capture_plotly_figures(theme_mode: str = "light") -> list:
-    charts = []
-    logger.info(f"📊 Capture des figures Plotly : {len(plotly_capture_renderer.figures)} figures détectées.")
+def _capture_plotly_figures(theme_mode: str = "light") -> List[Dict]:
+    charts: List[Dict] = []
+    logger.info(f"📊 Plotly : {len(plotly_capture_renderer.figures)} figures")
     for i, fig in enumerate(plotly_capture_renderer.figures):
         try:
-            # Détecter le type de graphique dynamiquement
             chart_type = "bar"
             if fig.data:
-                p_type = fig.data[0].type
-                if p_type == "pie":
+                pt = fig.data[0].type
+                if pt == "pie":
                     chart_type = "pie"
-                elif p_type in ["scatter", "scattergl"]:
+                elif pt in ("scatter", "scattergl"):
                     chart_type = "line"
-            
-            # Appliquer le layout Premium et le thème dynamique
-            from utils.staffing_charts import apply_premium_layout, decode_plotly_bdata
-            apply_premium_layout(fig, theme_mode, chart_type)
 
-            # Convertir la figure Plotly en image PNG statique
+            try:
+                from utils.staffing_charts import apply_premium_layout, decode_plotly_bdata
+                apply_premium_layout(fig, theme_mode, chart_type)
+                plotly_json = decode_plotly_bdata(json.loads(pio.to_json(fig)))
+            except Exception:
+                _apply_premium_layout(fig, theme_mode, chart_type)
+                plotly_json = _decode_plotly_bdata(json.loads(pio.to_json(fig)))
+
             img_bytes = fig.to_image(format="png", width=800, height=500, scale=1.5)
-            b64 = base64.b64encode(img_bytes).decode("utf-8")
-            
-            # Récupérer le titre
+            b64 = "data:image/png;base64," + base64.b64encode(img_bytes).decode()
+
             title = "Analyse graphique"
             if hasattr(fig, "layout") and fig.layout.title and fig.layout.title.text:
                 title = fig.layout.title.text
-                
-            charts.append({
-                "title": title,
-                "type": chart_type,
-                "base64": f"data:image/png;base64,{b64}",
-                "plotly": decode_plotly_bdata(json.loads(pio.to_json(fig))),
-                "chartjs": None
-            })
+
+            charts.append({"title": title, "type": chart_type,
+                           "base64": b64, "plotly": plotly_json, "chartjs": None})
         except Exception as e:
-            logger.error(f"Erreur de capture de la figure Plotly {i}: {e}")
-            
-    # Réinitialiser la liste
+            logger.error(f"Erreur capture plotly {i}: {e}")
+
     plotly_capture_renderer.figures = []
     return charts
 
 
-def run_excel_agent(question: str, dataframes: Dict[str, pd.DataFrame], history: Optional[list] = None, theme_mode: str = "light") -> Dict[str, Any]:
-    """Exécute l'agent Pandas sur la question posée."""
-    logger.info(f"❓ Question Excel : {question}")
-    
-    # Réinitialiser les figures Plotly
+# ══════════════════════════════════════════════════════════════════════════════
+# RETRY 429
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _extract_retry_seconds(error_message: str) -> int:
+    m = re.search(r'in (?:(\d+)m)?(\d+(?:\.\d+)?)s', error_message)
+    if m:
+        return int(int(m.group(1) or 0) * 60 + float(m.group(2)))
+    return 60
+
+
+def _clean_markdown_table(answer: str) -> str:
+    lines, cleaned = answer.split("\n"), []
+    for line in lines:
+        if "|" in line:
+            line = re.sub(r"\s*\|\s*", "|", line)
+            line = line.replace("|", " | ").strip()
+            if "---" in line:
+                line = re.sub(r"\s*-\s*", "-", line)
+        cleaned.append(line)
+    return "\n".join(cleaned)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# RUNNER PRINCIPAL
+# ══════════════════════════════════════════════════════════════════════════════
+
+def run_excel_agent(
+    question:      str,
+    dataframes:    Dict[str, pd.DataFrame],
+    history:       Optional[List[Dict]] = None,
+    theme_mode:    str = "light",
+    max_retries:   int = 2,
+    project_id:    int = 0,
+    enable_charts: bool = False,   # ← AJOUT : False par défaut
+) -> Dict[str, Any]:
+
+    """
+    Exécute l'agent Pandas et retourne {"answer": str, "charts": list}.
+
+    RÈGLE GRAPHIQUES :
+      - Les graphiques sont générés UNIQUEMENT si l'utilisateur en demande
+        explicitement (mots-clés : graphe, graphique, chart, plot, barre…).
+      - Le graphique généré est CONTEXTUEL à la question posée (filtré par
+        l'agent lui-même via le code Plotly qu'il écrit).
+      - Aucun graphique automatique non demandé n'est ajouté.
+    """
+    logger.info(f"❓ Question Excel (projet {project_id}) : {question}")
+
     plotly_capture_renderer.figures = []
-    
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-    
-    # Tout nettoyer avant l'exécution
     plt.close("all")
 
-    agent = get_pandas_agent(dataframes)
-    
+    # ── Mémoire propre à cet agent Excel ──────────────────────────────────────
+    memory_ctx = EXCEL_MEMORY.get_context(project_id)
+
+    # ── Contexte historique (échanges courants de la session) ─────────────────
     history_context = ""
     if history:
-        history_context = "\n\n══════════════════════════════════════════════\nHISTORIQUE DES ÉCHANGES RÉCENTS :\n══════════════════════════════════════════════\n"
+        history_context = "\n\n══════ HISTORIQUE SESSION ══════\n"
         for h in history[-8:]:
-            role = "Utilisateur" if h.get("role") == "user" else "Assistant"
-            content = h.get("content", "")
-            if len(content) > 300:
-                content = content[:300] + "..."
+            role    = "Utilisateur" if h.get("role") == "user" else "Assistant"
+            content = str(h.get("content", ""))[:300]
             history_context += f"- {role} : {content}\n"
 
-    # Si l'utilisateur veut un graphe, on force explicitement le prompt à utiliser Plotly Express
     lower_q = question.lower()
-    if any(kw in lower_q for kw in ["graphe", "graphique", "chart", "plot", "barre", "courbe", "diagramme", "barchart", "piechart"]):
-        question_extended = (
-            question + history_context +
-            "\n\nIMPORTANT : Puisque l'utilisateur demande explicitement un graphique, "
-            "tu DOIS impérativement écrire du code Python pour tracer ce graphique (ex: bar, pie ou line chart) "
-            "à l'aide de la bibliothèque Plotly Express (import plotly.express as px) et appeler fig.show() à la fin de ton code. "
-            "Tu dois impérativement filtrer le DataFrame pour ne représenter que ce que demande l'utilisateur (par exemple, si l'utilisateur demande le top 5 ou les 5 premiers, trie les données par la colonne appropriée et sélectionne uniquement les 5 premières lignes avant de tracer le graphique). Ne trace jamais l'intégralité du tableau si la question demande une sélection spécifique. "
-            "Ne te contente pas d'écrire des tableaux ou du texte."
+    chart_kws = ["graphe", "graphique", "chart", "plot", "barre",
+                 "courbe", "diagramme", "barchart", "piechart", "visualise",
+                 "affiche", "montre", "trace"]
+    
+    # ── MODIFICATION : is_chart_request uniquement si enable_charts=True ──
+    is_chart_request = enable_charts and any(kw in lower_q for kw in chart_kws)
+
+    chart_injection = ""
+    if is_chart_request:
+        chart_injection = (
+            "\n\nIMPORTANT : L'utilisateur demande UN graphique CONTEXTUEL à sa question. "
+            "Utilise Plotly Express (import plotly.express as px) et appelle fig.show() à la fin. "
+            "Le graphique doit représenter UNIQUEMENT les données liées à la question posée. "
+            "Filtre d'abord, trace ensuite."
         )
-    else:
-        question_extended = question + history_context
 
-    try:
-        result = agent.invoke({"input": question_extended})
-        
-        if isinstance(result, dict):
-            answer = result.get("output", "")
-        else:
-            answer = str(result)
-            
-        logger.info(f"✅ Réponse Excel ({len(answer)} caractères)")
-        
-        # Capture des graphiques dessinés (Plotly et Matplotlib)
-        charts_plotly = _capture_plotly_figures(theme_mode)
-        charts_matplotlib = _capture_matplotlib_figures()
-        charts = charts_plotly + charts_matplotlib
-        
-        # Fallback: si aucun graphique n'a été détecté mais que la réponse ou la trajectoire contient du code python
-        if not charts and any(kw in lower_q for kw in ["graphe", "graphique", "chart", "plot", "barre", "courbe", "diagramme", "barchart", "piechart"]):
-            import re
-            
-            # Construire la trajectoire complète pour chercher du code
-            full_trajectory = answer
-            if isinstance(result, dict) and "intermediate_steps" in result:
-                for action, obs in result["intermediate_steps"]:
-                    full_trajectory += f"\n{getattr(action, 'tool_input', '')}\n{getattr(action, 'log', '')}\n{obs}"
-            
-            code_blocks = re.findall(r"```python\s*(.*?)\s*```", full_trajectory, re.DOTALL)
-            if code_blocks:
-                logger.info(f"🔍 Aucun graphique détecté mais {len(code_blocks)} bloc(s) de code Python trouvé(s) dans la trajectoire. Exécution en fallback...")
-                for code in code_blocks:
-                    try:
-                        # Nettoyer le code des chargements de fichiers locaux fictifs
-                        clean_lines = []
-                        for line in code.splitlines():
-                            if ("read_csv" in line or "read_excel" in line) and "df =" in line:
-                                clean_lines.append("# " + line)
-                            else:
-                                clean_lines.append(line)
-                        cleaned_code = "\n".join(clean_lines)
 
-                        # Exécuter le code en injectant les dataframes dans le namespace
-                        local_ns = {}
+    question_extended = memory_ctx + question + history_context + chart_injection
+
+    agent = get_pandas_agent(dataframes)
+
+    for attempt in range(max_retries + 1):
+        try:
+            result = agent.invoke({"input": question_extended})
+            answer = (result.get("output", str(result))
+                      if isinstance(result, dict) else str(result))
+            answer = _clean_markdown_table(answer)
+            logger.info(f"✅ Réponse Excel ({len(answer)} chars)")
+
+            # ── Mémoriser l'échange ────────────────────────────────────────────
+            EXCEL_MEMORY.add(project_id, question, answer)
+
+            # ── Capture graphiques explicitement demandés ──────────────────────
+            charts: List[Dict] = []
+            if is_chart_request:
+                charts = (_capture_plotly_figures(theme_mode)
+                          + _capture_matplotlib_figures(theme_mode))
+
+                # Fallback : blocs de code dans la trajectoire
+                if not charts:
+                    full_traj = answer
+                    if isinstance(result, dict) and "intermediate_steps" in result:
+                        for action, obs in result["intermediate_steps"]:
+                            full_traj += (f"\n{getattr(action, 'tool_input', '')}"
+                                         f"\n{obs}")
+                    code_blocks = re.findall(
+                        r"```python\s*(.*?)\s*```", full_traj, re.DOTALL)
+                    if code_blocks:
+                        logger.info(f"🔍 Fallback : {len(code_blocks)} bloc(s) de code")
+                        local_ns: Dict = {}
                         df_list = list(dataframes.values())
                         if len(df_list) == 1:
                             local_ns["df"] = df_list[0]
                         for name, df in dataframes.items():
                             local_ns[name] = df
-                        
-                        # Exécuter le code
-                        exec(cleaned_code, globals(), local_ns)
-                    except Exception as exec_err:
-                        logger.warning(f"⚠️ Échec de l'exécution du code en fallback : {exec_err}")
-                
-                # Recapturer après exécution en fallback
-                charts_plotly = _capture_plotly_figures(theme_mode)
-                charts_matplotlib = _capture_matplotlib_figures()
-                charts = charts_plotly + charts_matplotlib
+                        for code in code_blocks:
+                            try:
+                                exec(sanitize_python_code(code), globals(), local_ns)
+                            except Exception as exec_err:
+                                logger.warning(f"⚠️ Fallback exec : {exec_err}")
+                        charts = (_capture_plotly_figures(theme_mode)
+                                  + _capture_matplotlib_figures(theme_mode))
 
-        # Filtrer si non demandé
-        if not any(kw in lower_q for kw in ["graphe", "graphique", "chart", "plot", "barre", "courbe", "diagramme", "barchart", "piechart"]):
-            charts = []
-            
-        return {"answer": answer, "charts": charts}
-    except Exception as e:
-        logger.error(f"❌ Erreur agent Excel : {e}")
-        plt.close("all")
-        return {"answer": f"❌ Erreur lors de l'analyse Excel : {str(e)}", "charts": []}
+            return {"answer": answer, "charts": charts}
+
+        except Exception as e:
+            error_str = str(e)
+            if "429" in error_str or "rate_limit_exceeded" in error_str:
+                wait_sec = min(_extract_retry_seconds(error_str), 35)
+                if attempt < max_retries:
+                    logger.warning(
+                        f"⏳ [Tentative {attempt + 1}] Rate limit 429 — attente {wait_sec}s...")
+                    time.sleep(wait_sec)
+                    continue
+                return {
+                    "answer": "⚠️ **Quota Groq temporairement atteint.**\nRéessayez dans quelques secondes.",
+                    "charts": [],
+                }
+
+            logger.error(f"❌ Erreur agent Excel : {e}")
+            plt.close("all")
+            return {"answer": f"❌ Erreur lors de l'analyse : {str(e)}", "charts": []}
+
+    return {"answer": "❌ Nombre maximum de tentatives atteint.", "charts": []}

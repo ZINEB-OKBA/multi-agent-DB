@@ -31,29 +31,84 @@ export class StaffingComponent implements OnInit {
   
   searchTerm = '';
 
+  // Sorting state
+  collabSortColumn = '';
+  collabSortDirection: 'asc' | 'desc' = 'asc';
+  projectSortColumn = '';
+  projectSortDirection: 'asc' | 'desc' = 'asc';
+
   get filteredCollaborators(): Collaborator[] {
-    if (!this.searchTerm.trim()) return this.collaborators;
-    const term = this.searchTerm.toLowerCase().trim();
-    return this.collaborators.filter(c => 
-      (c.collaborateur || '').toLowerCase().includes(term) ||
-      (c.profilProfessionnel || '').toLowerCase().includes(term) ||
-      (c.anciennete || '').toLowerCase().includes(term) ||
-      (c.dateDemarrage || '').toLowerCase().includes(term) ||
-      String(c.salaire || '').includes(term)
-    );
+    let list = [...this.collaborators];
+    if (this.searchTerm.trim()) {
+      const term = this.searchTerm.toLowerCase().trim();
+      list = list.filter(c => 
+        (c.collaborateur || '').toLowerCase().includes(term) ||
+        (c.profilProfessionnel || '').toLowerCase().includes(term) ||
+        (c.anciennete || '').toLowerCase().includes(term) ||
+        (c.dateDemarrage || '').toLowerCase().includes(term) ||
+        String(c.salaire || '').includes(term)
+      );
+    }
+    
+    if (this.collabSortColumn) {
+      const col = this.collabSortColumn;
+      const dir = this.collabSortDirection === 'asc' ? 1 : -1;
+      list.sort((a: any, b: any) => {
+        const valA = a[col];
+        const valB = b[col];
+        
+        if (col === 'salaire') {
+          return (Number(valA || 0) - Number(valB || 0)) * dir;
+        }
+        if (col === 'dateDemarrage') {
+          const dateA = new Date(valA || '').getTime();
+          const dateB = new Date(valB || '').getTime();
+          return (dateA - dateB) * dir;
+        }
+        if (col === 'anciennete') {
+          const numA = parseInt(valA, 10) || 0;
+          const numB = parseInt(valB, 10) || 0;
+          return (numA - numB) * dir;
+        }
+        return String(valA || '').localeCompare(String(valB || '')) * dir;
+      });
+    }
+    return list;
   }
 
   get filteredProjects(): Project[] {
-    if (!this.searchTerm.trim()) return this.projects;
-    const term = this.searchTerm.toLowerCase().trim();
-    return this.projects.filter(p => 
-      (p.name || '').toLowerCase().includes(term) ||
-      (p.description || '').toLowerCase().includes(term) ||
-      (p.clientName || '').toLowerCase().includes(term) ||
-      (p.startDate || '').toLowerCase().includes(term) ||
-      (p.endDate || '').toLowerCase().includes(term) ||
-      String(p.turnover || '').includes(term)
-    );
+    let list = [...this.projects];
+    if (this.searchTerm.trim()) {
+      const term = this.searchTerm.toLowerCase().trim();
+      list = list.filter(p => 
+        (p.name || '').toLowerCase().includes(term) ||
+        (p.description || '').toLowerCase().includes(term) ||
+        (p.clientName || '').toLowerCase().includes(term) ||
+        (p.startDate || '').toLowerCase().includes(term) ||
+        (p.endDate || '').toLowerCase().includes(term) ||
+        String(p.turnover || '').includes(term)
+      );
+    }
+    
+    if (this.projectSortColumn) {
+      const col = this.projectSortColumn;
+      const dir = this.projectSortDirection === 'asc' ? 1 : -1;
+      list.sort((a: any, b: any) => {
+        const valA = a[col];
+        const valB = b[col];
+        
+        if (col === 'turnover') {
+          return (Number(valA || 0) - Number(valB || 0)) * dir;
+        }
+        if (col === 'startDate' || col === 'endDate') {
+          const dateA = new Date(valA || '').getTime();
+          const dateB = new Date(valB || '').getTime();
+          return (dateA - dateB) * dir;
+        }
+        return String(valA || '').localeCompare(String(valB || '')) * dir;
+      });
+    }
+    return list;
   }
 
   get filteredImputations(): Imputation[] {
@@ -123,12 +178,21 @@ export class StaffingComponent implements OnInit {
   saveCollaborator(): void {
     this.collabSubmitted = true;
     if (!this.collabForm.collaborateur || !this.collabForm.dateDemarrage || !this.collabForm.profilProfessionnel || !this.collabForm.anciennete || !this.collabForm.salaire) return;
+    if (this.isCollabDateInvalid()) return;
     this.staffingService.createCollaborator(this.collabForm).subscribe({
       next: () => {
         this.closeCollaboratorModal();
         this.loadData();
       }
     });
+  }
+
+  isCollabDateInvalid(): boolean {
+    if (!this.collabForm.dateDemarrage) return false;
+    const regex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!regex.test(this.collabForm.dateDemarrage.trim())) return true;
+    const d = new Date(this.collabForm.dateDemarrage);
+    return isNaN(d.getTime());
   }
 
   editCollaborator(collab: Collaborator): void {
@@ -184,13 +248,32 @@ export class StaffingComponent implements OnInit {
   
   saveImputation(): void {
     this.imputationSubmitted = true;
-    if (!this.imputationForm.collaborateurId || !this.imputationForm.projetId || !this.imputationForm.mois || !this.imputationForm.annee || !this.imputationForm.nbrJours) return;
+    if (!this.imputationForm.collaborateurId || !this.imputationForm.projetId || !this.imputationForm.mois || !this.imputationForm.annee || this.imputationForm.nbrJours === undefined || this.imputationForm.nbrJours === null) return;
+    if (this.isImputationMoisInvalid() || this.isImputationAnneeInvalid() || this.isImputationNbrJoursInvalid()) return;
     this.staffingService.createImputation(this.imputationForm).subscribe({
       next: () => {
         this.closeImputationModal();
         this.loadData();
       }
     });
+  }
+
+  isImputationMoisInvalid(): boolean {
+    if (!this.imputationForm.mois) return false;
+    const m = parseInt(this.imputationForm.mois, 10);
+    return isNaN(m) || m < 1 || m > 12;
+  }
+
+  isImputationAnneeInvalid(): boolean {
+    if (!this.imputationForm.annee) return false;
+    const y = parseInt(this.imputationForm.annee, 10);
+    return isNaN(y) || y < 2000 || y > 2100 || !/^\d{4}$/.test(this.imputationForm.annee.trim());
+  }
+
+  isImputationNbrJoursInvalid(): boolean {
+    const days = this.imputationForm.nbrJours;
+    if (days === undefined || days === null) return false;
+    return days < 0 || days > 31;
   }
 
   editImputation(imp: Imputation): void {
@@ -222,12 +305,55 @@ export class StaffingComponent implements OnInit {
   saveProject(): void {
     this.projectSubmitted = true;
     if (!this.projectForm.name || !this.projectForm.clientName || !this.projectForm.startDate || !this.projectForm.endDate || !this.projectForm.turnover) return;
+    if (this.isProjectStartDateInvalid() || this.isProjectEndDateInvalid() || this.isProjectDateRangeInvalid()) return;
     this.staffingService.createProject(this.projectForm).subscribe({
       next: () => {
         this.closeProjectModal();
         this.loadData();
       }
     });
+  }
+
+  isProjectStartDateInvalid(): boolean {
+    if (!this.projectForm.startDate) return false;
+    const regex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!regex.test(this.projectForm.startDate.trim())) return true;
+    const d = new Date(this.projectForm.startDate);
+    return isNaN(d.getTime());
+  }
+
+  isProjectEndDateInvalid(): boolean {
+    if (!this.projectForm.endDate) return false;
+    const regex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!regex.test(this.projectForm.endDate.trim())) return true;
+    const d = new Date(this.projectForm.endDate);
+    return isNaN(d.getTime());
+  }
+
+  isProjectDateRangeInvalid(): boolean {
+    if (!this.projectForm.startDate || !this.projectForm.endDate) return false;
+    if (this.isProjectStartDateInvalid() || this.isProjectEndDateInvalid()) return false;
+    const start = new Date(this.projectForm.startDate);
+    const end = new Date(this.projectForm.endDate);
+    return end < start;
+  }
+
+  toggleCollabSort(col: string): void {
+    if (this.collabSortColumn === col) {
+      this.collabSortDirection = this.collabSortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.collabSortColumn = col;
+      this.collabSortDirection = 'asc';
+    }
+  }
+
+  toggleProjectSort(col: string): void {
+    if (this.projectSortColumn === col) {
+      this.projectSortDirection = this.projectSortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.projectSortColumn = col;
+      this.projectSortDirection = 'asc';
+    }
   }
 
   editProject(proj: Project): void {

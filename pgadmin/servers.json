@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Staffing DB",
+      "Group": "Servers",
+      "Host": "staffing_db",
+      "Port": 5432,
+      "MaintenanceDB": "staffdb",
+      "Username": "postgres",
+      "SSLMode": "prefer",
+      "PassFile": "/pgpass"
+    }
+  }
+}

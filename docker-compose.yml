@@ -1,9 +1,14 @@
 version: '3.9'
 
 services:
-  # 🗄️ PostgreSQL Database
+
+  # ─────────────────────────────────────────────────────────────
+  # 🗄️  PostgreSQL — données persistées via volume nommé
+  # ─────────────────────────────────────────────────────────────
   staffing_db:
     image: postgres:15
+    container_name: staffing_db
+    restart: unless-stopped # ← redémarre automatiquement
     ports:
       - "5433:5432"
     environment:
@@ -11,28 +16,51 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: Admin123
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data # ← tes données survivent ici
     networks:
       - app_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d staffdb" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # 🛠️ pgAdmin
+  # ─────────────────────────────────────────────────────────────
+  # 🛠️  pgAdmin — configuration persistée + serveur pré-enregistré
+  # ─────────────────────────────────────────────────────────────
   agentic_pgadmin:
     image: dpage/pgadmin4
+    container_name: agentic_pgadmin
+    restart: unless-stopped
     ports:
       - "5055:80"
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin
+      # ↓ Dit à pgAdmin de charger servers.json au 1er démarrage
+      PGADMIN_SERVER_JSON_FILE: /pgadmin4/servers.json
+    volumes:
+      # ① Persistance de toute la config pgAdmin (connexions, préférences, historique)
+      - pgadmin_data:/var/lib/pgadmin
+      # ② Fichier qui pré-enregistre le serveur PostgreSQL automatiquement
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
+      # ③ Fichier de mot de passe pour la connexion automatique (pas de popup)
+      - ./pgadmin/pgpass:/pgpass:ro
     depends_on:
-      - staffing_db
+      staffing_db:
+        condition: service_healthy
     networks:
       - app_network
 
-  # 🤖 Documenting Agent (Python FastAPI)
+  # ─────────────────────────────────────────────────────────────
+  # 🤖  FastAPI
+  # ─────────────────────────────────────────────────────────────
   agentic_analytics_api:
     build:
       context: ./documenting-agent
       dockerfile: Dockerfile
+    container_name: agentic_analytics_api
+    restart: unless-stopped
     ports:
       - "8001:8000"
     environment:
@@ -49,7 +77,8 @@ services:
       - DB_PASSWORD=Admin123
       - SPRING_BOOT_CALLBACK_URL=http://backend-web:8080/api/internal/documents/callback
     depends_on:
-      - staffing_db
+      staffing_db:
+        condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
@@ -57,11 +86,15 @@ services:
     networks:
       - app_network
 
-  # ☕ Spring Boot Backend
+  # ─────────────────────────────────────────────────────────────
+  # ☕  Spring Boot
+  # ─────────────────────────────────────────────────────────────
   backend-web:
     build:
       context: ./dev/backend/Backend-Motul
       dockerfile: Dockerfile
+    container_name: backend-web
+    restart: unless-stopped
     ports:
       - "8084:8080"
     environment:
@@ -73,16 +106,22 @@ services:
       - EXTERNAL_AI_DOCUMENTS=http://agentic_analytics_api:8000/api/documents/backoffice/receive-and-index
       - EXTERNAL_AI_DEX=http://agentic_analytics_api:8000/api/ai
     depends_on:
-      - staffing_db
-      - agentic_analytics_api
+      staffing_db:
+        condition: service_healthy
+      agentic_analytics_api:
+        condition: service_started
     networks:
       - app_network
 
-  # 🎨 Angular Frontend
+  # ─────────────────────────────────────────────────────────────
+  # 🎨  Angular
+  # ─────────────────────────────────────────────────────────────
   motul-frontend:
     build:
       context: ./dev/Front-Motul/Front-Motul
       dockerfile: Dockerfile
+    container_name: motul-frontend
+    restart: unless-stopped
     ports:
       - "4201:80"
     depends_on:
@@ -90,8 +129,13 @@ services:
     networks:
       - app_network
 
+# ─────────────────────────────────────────────────────────────
+# Volumes — DEUX volumes nommés maintenant
+# ─────────────────────────────────────────────────────────────
 volumes:
-  postgres_data:
+  postgres_data: # ← données PostgreSQL (existait déjà)
+  pgadmin_data:
+    # ← config pgAdmin (NOUVEAU — résout ton problème)
 
 networks:
   app_network:
