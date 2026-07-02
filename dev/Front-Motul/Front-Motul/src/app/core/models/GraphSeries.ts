@@ -1,0 +1,1 @@
+export interface GraphSeries { name: string; data: number[]; }

@@ -1,0 +1,4 @@
+export enum InstrumentTypeEnum{
+    AVANCES_7_JOURS = "AVANCES_7_JOURS",
+    REPRISE_LIQUIDITE_7_JOURS = "REPRISE_LIQUIDITE_7_JOURS"
+}

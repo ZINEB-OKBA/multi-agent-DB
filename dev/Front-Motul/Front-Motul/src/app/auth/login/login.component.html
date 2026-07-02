@@ -1,0 +1,76 @@
+<div class="antialiased flex h-full text-base text-foreground bg-background">
+    <div class="grid lg:grid-cols-2 grow">
+        <div class="flex justify-center items-center p-8 lg:p-10 order-2 lg:order-1">
+            <div class="kt-card max-w-[500px] w-full">
+                <form [formGroup]="form" (ngSubmit)="onSubmit()" class="kt-card-content flex flex-col gap-5 p-10" id="sign_up_form">
+                    <div class="text-center mb-2.5">
+                        <h3 class="text-lg font-medium text-mono leading-none mb-2.5">{{ 'MODULES.LOGIN.TITLE' | translate }}</h3>
+                    </div>
+
+                    <div class="flex items-center gap-2 mb-8">
+                        <span class="border-t border-border w-full"></span>
+                        <span class="text-xs text-secondary-foreground uppercase"></span>
+                        <span class="border-t border-border w-full"></span>
+                    </div>
+
+                    <div *ngIf="error == ExceptionsEnum.BAD_CREDENTIALS" class="fade show d-flex align-items-center text-red-500" role="alert">
+                        <span class="flex-grow-1">{{ 'MODULES.LOGIN.ERRORS.BAD_CREDENTIALS' | translate }}</span>
+                    </div>
+
+                    <div *ngIf="error == ExceptionsEnum.LOCKED_USER" class="fade show d-flex align-items-center text-red-500" role="alert">
+                        <span class="flex-grow-1"> {{ 'MODULES.LOGIN.ERRORS.LOCKED_USER' | translate }}</span>
+                    </div>
+
+                    <div class="flex flex-col gap-1">
+                        <label class="kt-form-label text-mono">{{ 'MODULES.LOGIN.IDENTIFIER' | translate }}</label>
+                        <input class="kt-input" formControlName="email" [placeholder]="'MODULES.LOGIN.EMAIL_PLACEHOLDER' | translate" type="text" />
+                    </div>
+
+                    <div class="flex flex-col gap-1">
+                        <label class="kt-form-label font-normal text-mono">{{ 'MODULES.LOGIN.PASSWORD' | translate }}</label>
+                        <div class="kt-input" data-kt-toggle-password="true">
+                            <input formControlName="password" type="password" [placeholder]="'MODULES.LOGIN.PASSWORD_PLACEHOLDER' | translate" />
+                            <div class="kt-btn kt-btn-sm kt-btn-ghost kt-btn-icon bg-transparent! -me-1.5" data-kt-toggle-password-trigger="true">
+                <span class="kt-toggle-password-active:hidden">
+                  <i class="ki-filled ki-eye text-muted-foreground"></i>
+                </span>
+                                <span class="hidden kt-toggle-password-active:block">
+                  <i class="ki-filled ki-eye-slash text-muted-foreground"></i>
+                </span>
+                            </div>
+                        </div>
+
+                        <label class="form-label text-default mt-3 flex justify-end">
+                            <a routerLink="/auth/forgot-password" class="text-sm kt-link">
+                                {{ 'MODULES.LOGIN.FORGOT_PASSWORD' | translate }}
+                            </a>
+                        </label>
+                    </div>
+
+                    <br />
+                    <button class="kt-btn kt-btn-primary flex justify-center grow" type="submit">{{ 'MODULES.LOGIN.SUBMIT' | translate }}</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="relative lg:rounded-xl lg:border lg:border-border lg:m-5 order-1 lg:order-2 bg-top xl:bg-cover bg-no-repeat branded-bg overflow-hidden">
+
+            <div class="absolute inset-0 bg-black/20 z-0"></div>
+
+            <div class="flex flex-col items-start justify-start text-gray-900 h-full p-10 lg:p-14 relative z-10">
+                <div class="max-w-2xl w-full rounded-3xl px-10 py-12">
+                    <div class="flex flex-col gap-4">
+                        <h2 class="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight leading-snug text-gray-950">
+                            {{ 'MODULES.LOGIN.SLOGAN' | translate }}
+                        </h2>
+                        <p class="text-base md:text-lg lg:text-xl text-gray-800 leading-relaxed">
+                            {{ 'MODULES.LOGIN.SLOGAN_SUBTITLE' | translate }}
+                        </p>
+                        <div class="mt-6 h-1 w-24 bg-gradient-to-r from-gray-400 via-gray-600 to-gray-800 rounded-full shadow-sm"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- End of Page -->

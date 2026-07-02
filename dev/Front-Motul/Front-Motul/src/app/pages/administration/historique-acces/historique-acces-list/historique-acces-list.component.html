@@ -1,0 +1,121 @@
+<div class="grid gap-5 lg:gap-7.5">
+    <div class="kt-card kt-card-grid min-w-full">
+        <div class="kt-card-header flex-wrap gap-2">
+            <h3 class="kt-card-title text-sm">
+                {{ 'MODULES.ACCESS_HISTORY.TABLE_TITLE' | translate }}
+            </h3>
+            <div class="flex flex-wrap gap-2 lg:gap-5">
+                <div class="flex">
+                    <label class="kt-input">
+                        <i class="ki-filled ki-magnifier">
+                        </i>
+                        <input
+                                [placeholder]="'MODULES.ACCESS_HISTORY.SEARCH' | translate"
+                                type="text"
+                                [(ngModel)]="term"
+                                (input)="onFind()"/>
+                    </label>
+                </div>
+
+            </div>
+        </div>
+        <div class="kt-card-content">
+            <div>
+                <div class="kt-scrollable-x-auto">
+                    <table class="kt-table table-auto kt-table-border">
+                        <thead>
+                        <ng-template #sortableHeader let-column="column" let-label="label">
+                            <th class="min-w-[180px]">
+                        <span class="kt-table-col">
+                          <span class="kt-table-col-label">
+                            {{ label }}
+                          </span>
+                          <span class="kt-table-col-sort"
+                                (click)="onSort(column)"
+                                [ngClass]="{
+                                  'asc': page.column === column && page.direction === 'ASC',
+                                  'desc': page.column === column && page.direction === 'DESC'
+                                }">
+                            <i *ngIf="page.column === column && page.direction === 'ASC'"
+                               class="ki-filled  ki-up text-gray-800 text-xs "></i>
+                            <i *ngIf="page.column === column && page.direction === 'DESC'"
+                               class="ki-filled ki-down text-gray-800 text-xs"></i>
+                          </span>
+                        </span>
+                            </th>
+                        </ng-template>
+                        <tr>
+                            <ng-container
+                                    *ngTemplateOutlet="sortableHeader; context: { column: 'username', label: ('MODULES.ACCESS_HISTORY.COLUMNS.USERNAME' | translate) }"></ng-container>
+                            <ng-container
+                                    *ngTemplateOutlet="sortableHeader; context: { column: 'browser', label: ('MODULES.ACCESS_HISTORY.COLUMNS.BROWSER' | translate) }"></ng-container>
+                            <ng-container
+                                    *ngTemplateOutlet="sortableHeader; context: { column: 'ip', label: ('MODULES.ACCESS_HISTORY.COLUMNS.IP' | translate) }"></ng-container>
+
+                            <ng-container
+                                    *ngTemplateOutlet="sortableHeader; context: { column: 'createdOn', label: ('MODULES.ACCESS_HISTORY.COLUMNS.DATE' | translate) }"></ng-container>
+                            <ng-container
+                                    *ngTemplateOutlet="sortableHeader; context: { column: 'success', label: ('MODULES.ACCESS_HISTORY.COLUMNS.STATUS' | translate) }"></ng-container>
+
+                            <th class="w-[60px]"></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr *ngFor="let element of data?.content">
+                            <td class="text-foreground font-normal">{{ element?.username }}</td>
+                            <td class="text-foreground font-normal">{{ element?.browser }}</td>
+                            <td class="text-foreground font-normal">{{ element?.ip }}</td>
+                            <td class="text-foreground font-normal">{{ element?.createdOn | date: 'dd/MM/yyyy'}}{{' á '}} {{element?.createdOn | date: 'HH:mm' }}</td>
+                            <td class="text-foreground font-normal">
+                                <span class="px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-green-200" *ngIf="element?.success">
+                                   {{ 'MODULES.ACCESS_HISTORY.STATUS.SUCCESS' | translate }}
+                                </span>
+                                <span class="px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-red-200" *ngIf="!element?.success">
+                                   {{ 'MODULES.ACCESS_HISTORY.STATUS.FAILED' | translate }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <div class="kt-menu flex-inline" data-kt-menu="true">
+                                    <div class="kt-menu-item" data-kt-menu-item-offset="0, 10px"
+                                         data-kt-menu-item-placement="bottom-end"
+                                         data-kt-menu-item-placement-rtl="bottom-start"
+                                         data-kt-menu-item-toggle="dropdown" data-kt-menu-item-trigger="click">
+                                        <button class="kt-menu-toggle kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost">
+                                            <i class="ki-filled ki-dots-vertical text-lg">
+                                            </i>
+                                        </button>
+                                        <div class="kt-menu-dropdown kt-menu-default w-full max-w-[175px]"
+                                             data-kt-menu-dismiss="true">
+                                            <div class="kt-menu-item">
+                                                <a class="kt-menu-link" href="javascript:void(0);">
+                                                    <span class="kt-menu-icon">
+                                                       <i class="ki-filled ki-search-list"></i>
+                                                    </span>
+                                                    <span class="kt-menu-title">{{ 'MODULES.BUTTONS.VIEW' | translate }}</span>
+                                                </a>
+                                            </div>
+                                            <div class="kt-menu-item">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div *ngIf="data?.totalElements > 0"
+                     class="kt-card-footer justify-end flex gap-5 text-secondary-foreground text-sm font-medium">
+                    <ngb-pagination
+                            [collectionSize]="data?.totalElements"
+                            [pageSize]="data.size"
+                            [maxSize]="5"
+                            [rotate]="true"
+                            [boundaryLinks]="true"
+                            [(page)]="currentPage">
+                    </ngb-pagination>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

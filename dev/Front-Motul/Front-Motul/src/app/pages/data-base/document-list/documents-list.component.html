@@ -1,0 +1,199 @@
+<div class="kt-container-fluid">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-5">
+        <div class="flex items-center gap-3">
+            <button class="btn btn-icon btn-light" (click)="goBack()" title="Retour">
+                <i class="ki-filled ki-arrow-left text-lg"></i>
+            </button>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h2 class="text-xl font-bold text-mono">{{ project?.name }}</h2>
+                    <span class="badge" [ngClass]="isPdf ? 'badge-danger' : 'badge-success'">
+                        <i class="ki-filled mr-1" [ngClass]="isPdf ? 'ki-file-text' : 'ki-file-sheet'"></i>
+                        {{ isPdf ? 'PDF & Word' : 'Excel & CSV' }}
+                    </span>
+                </div>
+                <p class="text-sm text-secondary-foreground">
+                    {{ isPdf ? 'Documents indexés pour la recherche IA (FAISS)' : "Fichiers tabulaires pour l'agent Pandas" }}
+                </p>
+            </div>
+        </div>
+        <button class="kt-btn kt-btn-primary" (click)="openUploadModal()">
+            <i class="ki-filled ki-plus"></i>
+            Ajouter un fichier
+        </button>
+    </div>
+
+    <!-- Tableau -->
+    <div class="kt-card kt-card-grid min-w-full">
+        <div class="kt-card-content">
+            <div class="kt-scrollable-x-auto">
+                <table class="kt-table table-auto kt-table-border">
+                    <thead>
+                    <tr>
+                        <th class="w-10">#</th>
+                        <th>Nom du fichier</th>
+                        <th>Type</th>
+                        <th>Indexation IA</th>
+                        <th>Importé le</th>
+                        <th class="text-center" style="min-width: 230px">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+
+                    <tr *ngIf="isLoading">
+                        <td colspan="6" class="text-center py-10">
+                            <i class="ki-filled ki-loading animate-spin text-xl text-secondary-foreground"></i>
+                        </td>
+                    </tr>
+
+                    <tr *ngFor="let doc of filteredDocuments; let i = index">
+                        <td class="text-secondary-foreground text-sm">{{ i + 1 }}</td>
+                        <td class="font-medium">
+                            <div class="flex items-center gap-2">
+                                <i class="ki-filled text-sm" [ngClass]="getFileIcon(doc.fileName)"></i>
+                                <span>{{ doc.fileName }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="text-xs font-bold uppercase text-secondary-foreground">
+                                {{ getExtension(doc.fileName) }}
+                            </span>
+                        </td>
+                        <td>
+                            <div *ngIf="doc.isIndexed" class="flex items-center gap-1.5 text-success text-sm">
+                                <i class="ki-filled ki-check-circle"></i><span>Indexé</span>
+                            </div>
+                            <div *ngIf="doc.indexing && !doc.isIndexed" class="flex items-center gap-1.5 text-warning text-sm">
+                                <i class="ki-filled ki-loading animate-spin"></i><span>En cours...</span>
+                            </div>
+                            <div *ngIf="!doc.isIndexed && !doc.indexing && !doc.indexError"
+                                 class="flex items-center gap-1.5 text-secondary-foreground text-sm">
+                                <i class="ki-filled ki-time"></i><span>En attente</span>
+                            </div>
+                            <div *ngIf="doc.indexError" class="flex items-center gap-1.5 text-danger text-sm" [title]="doc.indexError">
+                                <i class="ki-filled ki-information-2"></i><span>Erreur</span>
+                            </div>
+                        </td>
+                        <td class="text-sm text-secondary-foreground text-nowrap">
+                            {{ doc.uploadedAt | date:'dd/MM/yyyy HH:mm' }}
+                        </td>
+
+                        <!-- ACTIONS -->
+                        <td class="text-center">
+                            <div class="flex items-center justify-center gap-1.5">
+
+                                <!-- Indexer (PDF non indexé) -->
+                                <button *ngIf="isPdf && !doc.isIndexed && !doc.indexing"
+                                        class="btn btn-sm btn-light-warning flex items-center gap-1"
+                                        (click)="triggerIndex(doc.id)"
+                                        title="Indexer maintenant">
+                                    <i class="ki-filled ki-abstract-26 text-xs"></i>
+                                    <span class="text-xs">Indexer</span>
+                                </button>
+
+                                <!-- TÉLÉCHARGER (base64 → fichier) -->
+                                <button class="btn btn-sm btn-light flex items-center gap-1 border border-border hover:border-primary hover:text-primary transition-colors"
+                                        (click)="downloadDocument(doc)"
+                                        [disabled]="downloadingId === doc.id"
+                                        title="Télécharger {{ doc.fileName }}">
+                                    <i class="ki-filled text-xs"
+                                       [ngClass]="downloadingId === doc.id ? 'ki-loading animate-spin' : 'ki-file-down'"></i>
+                                    <span class="text-xs">{{ downloadingId === doc.id ? 'En cours...' : 'Télécharger' }}</span>
+                                </button>
+
+                                <!-- Supprimer -->
+                                <button class="btn btn-icon btn-sm btn-light-danger"
+                                        (click)="deleteDocument(doc.id)"
+                                        title="Supprimer">
+                                    <i class="ki-filled ki-trash text-xs"></i>
+                                </button>
+
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr *ngIf="!isLoading && filteredDocuments.length === 0">
+                        <td colspan="6" class="text-center py-12 text-secondary-foreground">
+                            <i class="ki-filled text-4xl mb-3 block opacity-30"
+                               [ngClass]="isPdf ? 'ki-file-text' : 'ki-file-sheet'"></i>
+                            <p class="font-medium">Aucun fichier {{ isPdf ? 'PDF/Word' : 'Excel/CSV' }} pour ce projet</p>
+                            <a class="text-primary cursor-pointer text-sm mt-1 inline-block" (click)="openUploadModal()">
+                                Ajouter le premier fichier
+                            </a>
+                        </td>
+                    </tr>
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div *ngIf="filteredDocuments.length > 0" class="kt-card-footer text-sm text-secondary-foreground">
+            {{ filteredDocuments.length }} fichier{{ filteredDocuments.length > 1 ? 's' : '' }}
+            — {{ indexedCount }} indexé{{ indexedCount > 1 ? 's' : '' }}
+        </div>
+    </div>
+</div>
+
+<!-- MODALE UPLOAD -->
+<div *ngIf="showUploadModal" class="modal-backdrop show"></div>
+<div *ngIf="showUploadModal" class="modal show block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    Ajouter un fichier
+                    <span class="text-secondary-foreground font-normal text-sm ml-1">— {{ project?.name }}</span>
+                </h5>
+                <button type="button" class="btn-close" (click)="closeUploadModal()" [disabled]="isUploading"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-4">
+                    <label class="form-label font-bold">Fichier *</label>
+                    <div class="upload-zone border-dashed border-2 rounded-lg p-6 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
+                         [class.border-primary]="uploadForm.file"
+                         (click)="fileInput.click()"
+                         (dragover)="$event.preventDefault()"
+                         (drop)="onDrop($event)">
+                        <input type="file" #fileInput hidden [accept]="acceptedExtensions" (change)="onFileSelected($event)">
+                        <i class="ki-filled ki-file-up text-3xl text-primary mb-2 block"></i>
+                        <p class="text-sm font-medium">Cliquez ou glissez votre fichier ici</p>
+                        <span class="text-xs text-secondary-foreground">
+                            {{ isPdf ? 'PDF, Word (.pdf, .doc, .docx)' : 'Excel, CSV (.xlsx, .xls, .xlsm, .csv)' }} — Max 50 Mo
+                        </span>
+                    </div>
+                    <div *ngIf="uploadForm.file" class="mt-3 p-3 bg-light rounded-lg flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <i class="ki-filled text-primary flex-shrink-0" [ngClass]="getFileIcon(uploadForm.file.name)"></i>
+                            <span class="text-sm font-medium truncate">{{ uploadForm.file.name }}</span>
+                            <span class="text-xs text-secondary-foreground flex-shrink-0">{{ formatSize(uploadForm.file.size) }}</span>
+                        </div>
+                        <button class="btn btn-sm text-danger flex-shrink-0" (click)="uploadForm.file = null">
+                            <i class="ki-filled ki-x text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+                <div *ngIf="isUploading" class="mb-2">
+                    <div class="flex justify-between text-xs text-secondary-foreground mb-1">
+                        <span>Conversion Base64 et envoi...</span><span>{{ uploadProgress }}%</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div class="h-full bg-primary rounded-full transition-all duration-300" [style.width.%]="uploadProgress"></div>
+                    </div>
+                </div>
+                <div *ngIf="isPdf" class="flex items-center gap-2 mt-3">
+                    <input type="checkbox" [(ngModel)]="uploadForm.indexIA" id="iaIndex" class="w-4 h-4">
+                    <label for="iaIndex" class="text-sm font-medium cursor-pointer">Déclencher l'indexation IA après l'upload</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="kt-btn kt-btn-light" (click)="closeUploadModal()" [disabled]="isUploading">Annuler</button>
+                <button class="kt-btn kt-btn-primary" [disabled]="!uploadForm.file || isUploading" (click)="submitUpload()">
+                    <i *ngIf="isUploading" class="ki-filled ki-loading animate-spin mr-1"></i>
+                    {{ isUploading ? 'Envoi...' : 'Envoyer' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

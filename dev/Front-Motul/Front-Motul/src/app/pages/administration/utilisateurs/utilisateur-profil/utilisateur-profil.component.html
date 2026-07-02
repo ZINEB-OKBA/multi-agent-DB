@@ -1,0 +1,205 @@
+<form [formGroup]="profileForm" (ngSubmit)="onSubmitUpdateProfile()" class="flex grow gap-5 lg:gap-7.5">
+    <div class="flex flex-col items-stretch grow gap-5 lg:gap-7.5">
+        <div class="kt-card pb-2.5">
+            <div class="kt-card-header">
+                <h3 class="kt-card-title">
+                    {{ ('MODULES.PROFILES.EDIT_TITLE' | translate) }}
+                </h3>
+            </div>
+
+            <div class="kt-card-content grid gap-5 ">
+                <div class="kt-container-fluid">
+                    <div class="flex flex-col profil-bg items-center gap-2 lg:gap-3.5 py-4 lg:pt-5 lg:pb-10">
+                        <div class="relative w-[100px] h-[100px] rounded-full border-3 border-gray-300">
+                            <label for="avatar" class="cursor-pointer block w-full h-full">
+                                <img
+                                        *ngIf="image"
+                                        [src]="image"
+                                        alt="{{ 'MODULES.PROFILES.AVATAR' | translate }}"
+                                        class="w-full h-full rounded-full border-3 border-gray-300 object-cover"
+                                />
+                                <img
+                                        *ngIf="!image"
+                                        src="/assets/media/images/user.png"
+                                        alt="{{ MODULES.PROFILES.DEFAULT_AVATAR' | translate }}"
+                                        class="w-full h-full rounded-full border-3 border-gray-300 object-cover"
+                                />
+                            </label>
+                            <input
+                                    id="avatar"
+                                    type="file"
+                                    accept="image/*"
+                                    (change)="onFileChange($event)"
+                                    class="hidden"
+                            />
+                            <button class="kt-image-input-remove" data-kt-image-input-remove="true" data-kt-tooltip="true" data-kt-tooltip-placement="right" data-kt-tooltip-trigger="hover" type="button" (click)="removeProfilePhoto()">
+                                <i class="ki-filled ki-cross">
+                                </i>
+                                <span class="kt-tooltip" data-kt-tooltip-content="true">
+                    {{ ('MODULES.PROFILES.REMOVE_TOOLTIP' | translate) }}
+                   </span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="kt-tabs kt-tabs-line justify-between px-5 border-b border-border" data-kt-tabs="true">
+                    <div class="flex items-center gap-5">
+                        <button class="kt-tab-toggle py-3 active" data-kt-tab-toggle="#update_profile_form">
+                            {{ 'MODULES.PROFILES.TABS.PROFILE' | translate }}
+                        </button>
+                        <button class="kt-tab-toggle py-3" data-kt-tab-toggle="#update_password_form">
+                            {{ 'MODULES.PROFILES.TABS.PASSWORD' | translate }}
+                        </button>
+                    </div>
+                </div>
+
+
+                <div class="active grid gap-5" id="update_profile_form">
+                    <div class="flex flex-wrap lg:flex-nowrap gap-5">
+                        <div class="flex-1">
+                            <div class="input-group-form w-full">
+                                <input formControlName="lastName" type="text" autocomplete="off" class="input-form"
+                                       placeholder="{{ 'MODULES.PROFILES.NAME-PLACEHOLDER' | translate }}"/>
+                                <label class="user-label">{{ 'MODULES.PROFILES.NAME' | translate }} <span
+                                        class="text-required">*</span></label>
+                                <div *ngIf="isProfileFormFieldInvalid('lastName')"
+                                     class="text-red-500 text-sm mt-1">{{ 'MODULES.VALIDATION.REQUIRED' | translate }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex-1">
+                            <div class="input-group-form w-full">
+                                <input formControlName="firstName" type="text" autocomplete="off" class="input-form"
+                                       placeholder="{{ 'MODULES.PROFILES.FIRSTNAME-PLACEHOLDER' | translate }}"/>
+                                <label class="user-label">{{ 'MODULES.PROFILES.FIRSTNAME' | translate }} <span
+                                        class="text-required">*</span></label>
+                                <div *ngIf="isProfileFormFieldInvalid('firstName')"
+                                     class="text-red-500 text-sm mt-1">{{ 'MODULES.VALIDATION.REQUIRED' | translate }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap lg:flex-nowrap gap-5">
+                        <div class="flex-1">
+                            <div class="input-group-form w-full">
+                                <input formControlName="email" type="email" autocomplete="off" class="input-form"
+                                       placeholder="exemple@email.com"/>
+                                <label class="user-label">{{ 'MODULES.PROFILES.EMAIL' | translate }} <span
+                                        class="text-required">*</span></label>
+                                <div *ngIf="isProfileFormFieldInvalid('email')"
+                                     class="text-red-500 text-sm mt-1">{{ 'MODULES.VALIDATION.INVALID' | translate }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex-1">
+                            <div class="input-group-form w-full">
+                                <input formControlName="phone" type="text" autocomplete="off" class="input-form"
+                                       placeholder="{{ 'MODULES.PROFILES.PHONE-PLACEHOLDER' | translate }}"/>
+                                <label class="user-label">{{ 'MODULES.PROFILES.PHONE' | translate }} <span
+                                        class="text-required">*</span></label>
+                                <div *ngIf="isProfileFormFieldInvalid('phone')"
+                                     class="text-red-500 text-sm mt-1">{{ 'MODULES.VALIDATION.INVALID' | translate }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="kt-card-footer flex justify-between">
+                        <button type="button" (click)="onCancelProfileForm()"
+                                class="kt-btn kt-btn-outline kt-btn-destructive">
+                            <i class="ki-filled ki-left"></i> {{ 'MODULES.BUTTONS.CANCEL' | translate }}
+                        </button>
+                        <button type="submit" class="kt-btn kt-btn-primary">
+                            <i class="ki-filled ki-check-circle"></i>
+                            <span>{{ 'MODULES.BUTTONS.SAVE' | translate }}</span>
+                        </button>
+                    </div>
+                </div>
+                <form class="hidden" id="update_password_form" [formGroup]="passwordForm" (ngSubmit)="onPasswordSubmit()">
+                    <div class="flex flex-col items-center justify-center gap-5 w-1/2 mx-auto mb-4">
+                        <div class="kt-input" data-kt-toggle-password="true">
+                            <input formControlName="password" type="password"
+                                   [placeholder]="'MODULES.PROFILES.PASSWORD.CURRENT' | translate"/>
+                            <div class="kt-btn kt-btn-sm kt-btn-ghost kt-btn-icon bg-transparent! -me-1.5"
+                                 data-kt-toggle-password-trigger="true">
+                                <span class="kt-toggle-password-active:hidden">
+                                  <i class="ki-filled ki-eye text-muted-foreground"></i>
+                                </span>
+                                <span class="hidden kt-toggle-password-active:block">
+                                  <i class="ki-filled ki-eye-slash text-muted-foreground"></i>
+                                </span>
+                            </div>
+                        </div>
+                        <div>
+                            <div *ngIf="passwordForm.get('password')?.invalid && passwordForm.get('currentPassword')?.touched" class="text-red-500 text-sm mt-1">
+                                {{ 'MODULES.PROFILES.PASSWORD.REQUIRED' | translate }}
+                            </div>
+                        </div>
+
+                        <!-- New Password -->
+                        <div class="kt-input" data-kt-toggle-password="true">
+                            <input formControlName="newPassword" type="password" [placeholder]="'MODULES.PROFILES.PASSWORD.NEW_PLACEHOLDER' | translate"/>
+                            <div class="kt-btn kt-btn-sm kt-btn-ghost kt-btn-icon bg-transparent! -me-1.5" data-kt-toggle-password-trigger="true" >
+                              <span class="kt-toggle-password-active:hidden">
+                                <i class="ki-filled ki-eye text-muted-foreground"></i>
+                              </span>
+                                <span class="hidden kt-toggle-password-active:block">
+                                <i class="ki-filled ki-eye-slash text-muted-foreground"></i>
+                              </span>
+                            </div>
+                        </div>
+                        <div>
+                            <div *ngIf="passwordMismatch" class="text-red-500 text-sm mt-1">
+                                {{ 'MODULES.PROFILES.PASSWORD.MISMATCH' | translate }}
+                            </div>
+                            <div *ngIf="isPasswordFormFieldInvalid('newPassword')"class="text-red-500 text-sm mt-1">
+                                <div *ngIf="passwordForm.get('newPassword')?.errors?.['required']">
+                                    {{ 'MODULES.PROFILES.PASSWORD.REQUIRED' | translate }}
+                                </div>
+                                <div *ngIf="passwordForm.get('newPassword')?.errors?.['pattern']">
+                                    {{ 'MODULES.PROFILES.PASSWORD.INVALID_PATTERN' | translate }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Confirm Password -->
+                        <div class="kt-input" data-kt-toggle-password="true">
+                            <input formControlName="confirmPassword" type="password" [placeholder]="'MODULES.PROFILES.PASSWORD.CONFIRM_PLACEHOLDER' | translate"/>
+                            <div class="kt-btn kt-btn-sm kt-btn-ghost kt-btn-icon bg-transparent! -me-1.5" data-kt-toggle-password-trigger="true" >
+                              <span class="kt-toggle-password-active:hidden">
+                                <i class="ki-filled ki-eye text-muted-foreground"></i>
+                              </span>
+                                <span class="hidden kt-toggle-password-active:block">
+                                    <i class="ki-filled ki-eye-slash text-muted-foreground"></i>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div *ngIf="isPasswordFormFieldInvalid('confirmPassword')" class="text-red-500 text-sm mt-1" >
+                            <div *ngIf="passwordForm.get('confirmPassword')?.errors?.['required']">
+                                {{ 'MODULES.PROFILES.PASSWORD.REQUIRED' | translate }}
+                            </div>
+                            <div *ngIf="passwordForm.get('confirmPassword')?.errors?.['pattern']">
+                                {{ 'MODULES.PROFILES.PASSWORD.INVALID_PATTERN' | translate }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="kt-card-footer flex justify-between">
+                        <button type="button" (click)="onCancelPasswordForm()"
+                                class="kt-btn kt-btn-outline kt-btn-destructive">
+                            <i class="ki-filled ki-left"></i> {{ 'MODULES.BUTTONS.CANCEL' | translate }}
+                        </button>
+                        <button class="kt-btn kt-btn-primary" [disabled]="passwordForm.invalid">
+                            <i class="ki-filled ki-check-circle"></i>
+                            <span>{{ 'MODULES.BUTTONS.SAVE' | translate }}</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </div>
+</form>

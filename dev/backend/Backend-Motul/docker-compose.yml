@@ -1,0 +1,10 @@
+version: '3.9'
+
+services:
+  capital-trust-backend:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    container_name: capital-trust-backend
+    ports:
+      - "8081:8081"

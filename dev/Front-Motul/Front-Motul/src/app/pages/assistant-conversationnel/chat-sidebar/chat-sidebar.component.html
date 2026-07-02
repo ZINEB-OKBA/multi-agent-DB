@@ -1,0 +1,168 @@
+<div class="h-screen sidebar flex flex-col lg:flex-row gap-5 lg:gap-7.5">
+
+    <div class="kt-card lg:w-[400px] flex-shrink-0"
+         [ngClass]="{'hidden': !isSidebarOpen && !isDesktop, 'flex': isSidebarOpen || isDesktop}">
+
+        <div style="height: 75vh" class="flex flex-col w-full">
+
+            <div class="kt-tabs kt-tabs-line px-5 border-b border-border" data-kt-tabs="true">
+                <div class="flex items-center gap-5">
+                    <button class="kt-tab-toggle py-3" data-kt-tab-toggle="#groupe_tab">
+                        {{ 'MODULES.CHAT_SIDEBAR.TITLE' | translate }}
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-3 px-3 py-2">
+                <button (click)="addNewConversation()"
+                        class="w-full pl-10 pr-4 py-1 rounded-lg bg-primary text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer">
+                    <i class="ki-filled ki-plus text-lg"></i>
+                    {{ 'MODULES.CHAT_SIDEBAR.ADD_CONVERSATION' | translate }}
+                </button>
+
+                <div class="border-b border-border">
+                    <div class="relative">
+                        <input
+                                type="text"
+                                [placeholder]="'MODULES.CHAT_SIDEBAR.SEARCH_PLACEHOLDER' | translate"
+                                (keyup)="onLoadConversation()"
+                                [(ngModel)]="term"
+                                class="w-full pl-6 border border-border rounded-xl py-2"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            <div class="kt-tabs-content scroll-converstaions overflow-y-auto flex-1">
+                <div class="kt-tab-pane" id="groupe_tab">
+                    <div class="space-y-5 py-3 px-4">
+                        <div class="flex flex-col">
+                            <div *ngFor="let conversation of conversationList"
+                                 (click)="onSelectConversation(conversation)"
+                                 class="flex justify-between items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 p-2 rounded transition"
+                                 [ngClass]="{'bg-gray-100 dark:bg-gray-700': conversation === selectedConversation}">
+
+                                <div class="flex items-center gap-2 truncate">
+                                    <div class="flex items-center justify-center text-primary mr-2">
+                                        <i class="ki-filled ki-message-text-2 text-xl"></i>
+                                    </div>
+                                    <div class="truncate min-w-0">
+                                        <ng-container *ngIf="conversation.editing; else displayName">
+                                            <input type="text"
+                                                   [(ngModel)]="conversation.name"
+                                                   (keydown.enter)="rename(conversation)"
+                                                   class="text-sm border border-gray-300 rounded px-2 py-1 w-full"
+                                                   autofocus />
+                                        </ng-container>
+                                        <ng-template #displayName>
+                                            <a class="text-sm text-mono block truncate">{{ conversation.name }}</a>
+                                        </ng-template>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center gap-1.5">
+                                    <div class="kt-menu inline-flex" data-kt-menu="true">
+                                        <div class="kt-menu-item"
+                                             data-kt-menu-item-offset="0, 10px"
+                                             data-kt-menu-item-placement="bottom-end"
+                                             data-kt-menu-item-toggle="dropdown"
+                                             data-kt-menu-item-trigger="click">
+                                            <button class="kt-menu-toggle kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost">
+                                                <i class="ki-filled ki-dots-vertical text-lg text-primary"></i>
+                                            </button>
+                                            <div class="kt-menu-dropdown kt-menu-default w-full max-w-[175px]"
+                                                 data-kt-menu-dismiss="true">
+                                                <div class="kt-menu-item">
+                                                    <a (click)="deleteConversation(conversation?.id)"
+                                                       class="kt-menu-link text-danger hover:text-danger flex items-center gap-2">
+                                                        <i class="ki-filled ki-trash"></i>
+                                                        <span>{{ 'MODULES.CHAT_SIDEBAR.ACTIONS.DELETE' | translate }}</span>
+                                                    </a>
+                                                </div>
+                                                <div class="kt-menu-item">
+                                                    <a (click)="rename(conversation)"
+                                                       class="kt-menu-link hover:text-primary flex items-center gap-2">
+                                                        <i class="ki-filled ki-pencil"></i>
+                                                        <span>{{ 'MODULES.CHAT_SIDEBAR.ACTIONS.RENAME' | translate }}</span>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="kt-card flex-grow relative w-full"
+         [ngClass]="{'hidden': isSidebarOpen && !isDesktop}">
+
+        <div class="lg:hidden absolute top-0 left-0 p-4 z-10">
+            <button (click)="toggleSidebar()" class="kt-btn kt-btn-sm kt-btn-icon kt-btn-ghost text-primary">
+                <i class="ki-filled ki-burger-menu-5 text-xl"></i>
+            </button>
+        </div>
+
+        <div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-border bg-white dark:bg-background relative z-1">
+            <!-- Left: Segmented Control -->
+            <div class="flex items-center bg-gray-100 dark:bg-zinc-800 p-1 rounded-xl border border-border">
+                <button type="button" 
+                        (click)="setStaffingMode(false)"
+                        [ngClass]="!isStaffingAgentMode ? 'bg-white dark:bg-zinc-700 shadow-sm font-semibold text-primary' : 'text-secondary-foreground hover:text-primary'"
+                        class="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm transition-all duration-200 font-medium">
+                    <i class="ki-filled ki-file text-sm"></i>
+                    Documents projet
+                </button>
+                <button type="button" 
+                        (click)="setStaffingMode(true)"
+                        [ngClass]="isStaffingAgentMode ? 'bg-white dark:bg-zinc-700 shadow-sm font-semibold text-primary' : 'text-secondary-foreground hover:text-primary'"
+                        class="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm transition-all duration-200 font-medium">
+                    <i class="ki-filled ki-people text-sm"></i>
+                    Agent staffing
+                </button>
+            </div>
+
+            <!-- Right: Project Selector (Visible only when documents mode is active) -->
+            <div *ngIf="!isStaffingAgentMode" class="flex items-center gap-3 ml-auto flex-shrink-0">
+                <span class="text-sm font-medium text-secondary-foreground whitespace-nowrap flex-shrink-0">Projet :</span>
+
+                <div *ngIf="projectsLoading"
+                     class="h-8 w-40 rounded-lg bg-gray-200 dark:bg-gray-700 animate-pulse flex-shrink-0"></div>
+
+                <select *ngIf="!projectsLoading"
+                        [(ngModel)]="selectedProjectName"
+                        (ngModelChange)="onProjectChange($event)"
+                        class="kt-input py-1.5 px-3 text-sm rounded-lg border border-border bg-white dark:bg-background
+                               focus:outline-none focus:ring-2 focus:ring-primary min-w-[180px] max-w-[280px] cursor-pointer">
+                    <option value="" disabled>— Sélectionner un projet —</option>
+                    <option *ngFor="let p of projects" [value]="p.name">{{ p.name }}</option>
+                </select>
+
+                <span *ngIf="selectedProjectName"
+                      class="flex items-center gap-1.5 text-xs font-medium text-success bg-success/10 px-2.5 py-1 rounded-full flex-shrink-0">
+                    <i class="ki-filled ki-check-circle text-xs"></i>
+                    Contexte actif
+                </span>
+
+                <span *ngIf="!selectedProjectName && !projectsLoading"
+                      class="flex items-center gap-1.5 text-xs font-medium text-warning bg-warning/10 px-2.5 py-1 rounded-full flex-shrink-0">
+                    <i class="ki-filled ki-information-2 text-xs"></i>
+                    Sélectionnez un projet
+                </span>
+            </div>
+        </div>
+
+        <app-chat-messages
+                [conversation]="selectedConversation"
+                [selectedProject]="selectedProjectName"
+                [isStaffingAgentMode]="isStaffingAgentMode"
+                (conversationCreated)="onConversationCreated($event)">
+        </app-chat-messages>
+
+    </div>
+</div>

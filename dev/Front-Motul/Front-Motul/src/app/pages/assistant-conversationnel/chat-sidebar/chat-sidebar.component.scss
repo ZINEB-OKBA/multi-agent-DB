@@ -1,0 +1,13 @@
+.group {
+  justify-content: space-between;
+}
+
+.active {
+  background-color: var(--color-gray-100);;
+}
+
+.scroll-sidebar {
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding: 0;
+}

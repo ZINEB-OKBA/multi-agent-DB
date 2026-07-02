@@ -1,0 +1,75 @@
+<div class="kt-container-fluid">
+
+    <!-- Header avec retour -->
+    <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-3">
+            <button class="btn btn-icon btn-light" (click)="goBack()" title="Retour aux projets">
+                <i class="ki-filled ki-arrow-left text-lg"></i>
+            </button>
+            <div>
+                <h2 class="text-2xl font-bold text-mono">{{ project?.name || '...' }}</h2>
+                <p class="text-sm text-secondary-foreground">
+                    {{ project?.description || 'Choisissez un type de document à gérer' }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2 cards de navigation -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-7.5 max-w-3xl">
+
+        <!-- Card PDF / Word -->
+        <div
+                class="kt-card flex flex-col gap-5 p-7 cursor-pointer hover:shadow-lg hover:border-primary transition-all duration-200 group"
+                (click)="navigateTo('pdf')">
+
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-danger/10 flex items-center justify-center flex-shrink-0">
+                    <i class="ki-filled ki-file-text text-danger text-2xl"></i>
+                </div>
+                <div>
+                    <p class="text-base font-bold text-mono group-hover:text-primary">Documents PDF & Word</p>
+                    <p class="text-xs text-secondary-foreground mt-0.5">Indexés pour la recherche IA (RAG)</p>
+                </div>
+            </div>
+
+            <p class="text-sm text-secondary-foreground">
+                Gérez vos fichiers <strong>.pdf</strong>, <strong>.docx</strong> et <strong>.doc</strong>.
+                Ces documents sont indexés dans FAISS pour alimenter le chatbot IA du projet.
+            </p>
+
+            <div class="flex items-center gap-1.5 text-sm text-primary font-medium group-hover:gap-3 transition-all">
+                <span>Voir les documents</span>
+                <i class="ki-filled ki-arrow-right text-sm"></i>
+            </div>
+        </div>
+
+        <!-- Card Excel / CSV -->
+        <div
+                class="kt-card flex flex-col gap-5 p-7 cursor-pointer hover:shadow-lg hover:border-primary transition-all duration-200 group"
+                (click)="navigateTo('excel')">
+
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center flex-shrink-0">
+                    <i class="ki-filled ki-file-sheet text-success text-2xl"></i>
+                </div>
+                <div>
+                    <p class="text-base font-bold text-mono group-hover:text-primary">Données Excel & CSV</p>
+                    <p class="text-xs text-secondary-foreground mt-0.5">Analysés par l'agent Pandas</p>
+                </div>
+            </div>
+
+            <p class="text-sm text-secondary-foreground">
+                Gérez vos fichiers <strong>.xlsx</strong>, <strong>.xls</strong>, <strong>.xlsm</strong> et <strong>.csv</strong>.
+                Ces tables sont utilisées par l'agent Excel pour répondre aux questions chiffrées.
+            </p>
+
+            <div class="flex items-center gap-1.5 text-sm text-primary font-medium group-hover:gap-3 transition-all">
+                <span>Voir les données</span>
+                <i class="ki-filled ki-arrow-right text-sm"></i>
+            </div>
+        </div>
+
+    </div>
+
+</div>

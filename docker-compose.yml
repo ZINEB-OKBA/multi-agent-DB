@@ -1,0 +1,98 @@
+version: '3.9'
+
+services:
+  # 🗄️ PostgreSQL Database
+  staffing_db:
+    image: postgres:15
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: staffdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Admin123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+
+  # 🛠️ pgAdmin
+  agentic_pgadmin:
+    image: dpage/pgadmin4
+    ports:
+      - "5055:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    depends_on:
+      - staffing_db
+    networks:
+      - app_network
+
+  # 🤖 Documenting Agent (Python FastAPI)
+  agentic_analytics_api:
+    build:
+      context: ./documenting-agent
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    environment:
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost,http://localhost:4201,http://localhost:8080,http://localhost:8081}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - DATA_DIR=${DATA_DIR:-data}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-nomic-embed-text}
+      - LLM_MODEL=${LLM_MODEL:-llama-3.3-70b-versatile}
+      - DB_HOST=staffing_db
+      - DB_NAME=staffdb
+      - DB_USER=postgres
+      - DB_PASSWORD=Admin123
+      - SPRING_BOOT_CALLBACK_URL=http://backend-web:8080/api/internal/documents/callback
+    depends_on:
+      - staffing_db
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./fastembed_cache:/tmp/fastembed_cache
+    networks:
+      - app_network
+
+  # ☕ Spring Boot Backend
+  backend-web:
+    build:
+      context: ./dev/backend/Backend-Motul
+      dockerfile: Dockerfile
+    ports:
+      - "8084:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://staffing_db:5432/staffdb
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=Admin123
+      - EXTERNAL_AI_URL=http://agentic_analytics_api:8000/api/chat/message
+      - EXTERNAL_AI_PROJECTS=http://agentic_analytics_api:8000/api/projects
+      - EXTERNAL_AI_DOCUMENTS=http://agentic_analytics_api:8000/api/documents/backoffice/receive-and-index
+      - EXTERNAL_AI_DEX=http://agentic_analytics_api:8000/api/ai
+    depends_on:
+      - staffing_db
+      - agentic_analytics_api
+    networks:
+      - app_network
+
+  # 🎨 Angular Frontend
+  motul-frontend:
+    build:
+      context: ./dev/Front-Motul/Front-Motul
+      dockerfile: Dockerfile
+    ports:
+      - "4201:80"
+    depends_on:
+      - backend-web
+    networks:
+      - app_network
+
+volumes:
+  postgres_data:
+
+networks:
+  app_network:
+    driver: bridge
