@@ -1,18 +1,30 @@
 <div class="m kt-card-content p-5 lg:p-6 flex flex-col relative h-full">
 
-    <!-- Switch de Mode d'Analyse -->
-    <div class="flex items-center gap-2 pb-3 border-b border-border mb-3 relative z-10">
-        <span class="text-xs font-semibold text-mono text-secondary-foreground uppercase tracking-wide mr-2">Mode d'analyse :</span>
-        <button type="button" 
-                (click)="setStaffingMode(false)"
-                [ngClass]="!isStaffingAgentMode ? 'kt-btn kt-btn-primary btn-sm py-1 px-3' : 'kt-btn btn-light btn-sm py-1 px-3'">
-            <i class="ki-filled ki-file text-xs mr-1"></i> Documents Projet
-        </button>
-        <button type="button" 
-                (click)="setStaffingMode(true)"
-                [ngClass]="isStaffingAgentMode ? 'kt-btn kt-btn-primary btn-sm py-1 px-3' : 'kt-btn btn-light btn-sm py-1 px-3'">
-            <i class="ki-filled ki-server text-xs mr-1"></i> Agent Staffing (NL-to-SQL BDD)
-        </button>
+    <!-- Switch de Mode d'Analyse (Segmented Pill Switcher) -->
+    <div class="mb-5 flex justify-start relative z-10">
+        <div style="background-color: #f1f1f2; padding: 4px; border-radius: 10px; display: inline-flex; gap: 4px; border: 1px solid #e4e6ef;">
+            <!-- Documents Projet -->
+            <button type="button" 
+                    (click)="setStaffingMode(false)"
+                    [style.background-color]="!isStaffingAgentMode ? '#ffffff' : 'transparent'"
+                    [style.box-shadow]="!isStaffingAgentMode ? '0px 2px 4px rgba(0, 0, 0, 0.05)' : 'none'"
+                    [style.border]="!isStaffingAgentMode ? '1px solid #dbdfe9' : '1px solid transparent'"
+                    style="border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 500; color: #181c32; display: inline-flex; align-items: center; cursor: pointer; transition: all 0.2s ease;">
+                <i class="ki-filled ki-file text-base mr-1.5" style="color: #7e8299;"></i>
+                Documents projet
+            </button>
+            
+            <!-- Agent Staffing -->
+            <button type="button" 
+                    (click)="setStaffingMode(true)"
+                    [style.background-color]="isStaffingAgentMode ? '#ffffff' : 'transparent'"
+                    [style.box-shadow]="isStaffingAgentMode ? '0px 2px 4px rgba(0, 0, 0, 0.05)' : 'none'"
+                    [style.border]="isStaffingAgentMode ? '1px solid #dbdfe9' : '1px solid transparent'"
+                    style="border-radius: 8px; padding: 6px 16px; font-size: 13px; font-weight: 500; color: #181c32; display: inline-flex; align-items: center; cursor: pointer; transition: all 0.2s ease;">
+                <i class="ki-filled ki-people text-base mr-1.5" style="color: #7e8299;"></i>
+                Agent staffing
+            </button>
+        </div>
     </div>
 
     <div class="scroll-messages space-y-4 flex-grow overflow-y-auto py-4 relative"
